@@ -1,0 +1,63 @@
+services:
+  backend:
+    build: ./backend
+    container_name: sams-backend
+    ports:
+      - "0:5000"
+    depends_on:
+      - mongodb
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/attendance_system
+    volumes:
+      - ./backend/src:/app/src
+    restart: unless-stopped
+    networks:
+      - sams-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: attendance-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - sams-network
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: sams-mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - sams-network
+
+  frontend:
+    build: ./frontend
+    container_name: sams-frontend
+    ports:
+      - "0:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - sams-network
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  sams-network:
+    driver: bridge
