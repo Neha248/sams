@@ -1,92 +1,113 @@
 # Smart Attendance Management System (SAMS)
 
-A complete, production-ready full-stack application for managing university/school student and staff attendance. Built with a pristine **"Neo-Shinjuku Night"** visual aesthetic encompassing glassmorphism, neon glows, and sleek deep navy tones.
+Full-stack attendance platform for Admin, Teacher, and Student workflows.
 
-## 🚀 Tech Stack
+## Tech Stack
 
-**Frontend:**
+- Frontend: React 18, Vite, TypeScript, Tailwind CSS, Zustand, Axios, React Router
+- Backend: Node.js, Express, TypeScript, Mongoose, JWT, bcrypt, Zod, PDFKit
+- Infra: Docker, Docker Compose, Nginx, MongoDB, Mongo Express
 
-- **React 18** & **Vite** (TypeScript)
-- **Tailwind CSS v3** (Custom Neo-Shinjuku Theme)
-- **Zustand** (State Management & Persisted Auth)
-- **Lucide React** (Icons) & **React Router v6**
-- **Axios** (With automatic token interception)
-
-**Backend:**
-
-- **Node.js** & **Express**
-- **TypeScript** & **Zod** (Input Validation)
-- **MongoDB** via **Mongoose**
-- **JWT** (Authentication) & **Bcrypt** (Password Hashing)
-- **PDFKit** (Automated Report Generation)
-
-**Infrastructure:**
-
-- **Docker** & **Docker Compose** (Containerization)
-- **Mongo Express** (Database Admin UI)
-- **Nginx** (Frontend Web Server & API proxy routing)
-
----
-
-## 📂 Project Structure
+## Updated Project Structure
 
 ```bash
-/
-├── backend/                  # Express + TypeScript Server
+SAMS-update/
+├── backend/
 │   ├── src/
-│   │   ├── config/           # Database configuration
-│   │   ├── controllers/      # API Logic (Admin, Teacher, Student)
-│   │   ├── models/           # Mongoose schemas
-│   │   ├── middlewares/      # JWT verify, Roles, and Global Error handlers
-│   │   ├── routes/           # Express routers
-│   │   ├── services/         # PDF generation service
-│   │   ├── utils/            # JWT helpers, format templates, logging
-│   │   └── validators/       # Zod schemas for validation
+│   │   ├── app.ts
+│   │   ├── server.ts
+│   │   ├── config/
+│   │   │   └── db.ts
+│   │   ├── controllers/
+│   │   │   ├── admin.controller.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── student.controller.ts
+│   │   │   └── teacher.controller.ts
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── error.middleware.ts
+│   │   │   └── role.middleware.ts
+│   │   ├── models/
+│   │   │   ├── Attendance.model.ts
+│   │   │   ├── Department.model.ts
+│   │   │   ├── Notification.model.ts
+│   │   │   ├── StudentProfile.model.ts
+│   │   │   ├── Subject.model.ts
+│   │   │   ├── TeacherProfile.model.ts
+│   │   │   ├── Timetable.model.ts
+│   │   │   └── User.model.ts
+│   │   ├── routes/
+│   │   │   ├── admin.routes.ts
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── student.routes.ts
+│   │   │   └── teacher.routes.ts
+│   │   ├── services/
+│   │   │   └── pdf.service.ts
+│   │   ├── utils/
+│   │   │   ├── jwt.ts
+│   │   │   ├── logger.ts
+│   │   │   └── response.ts
+│   │   └── validators/
+│   │       ├── attendance.validator.ts
+│   │       ├── auth.validator.ts
+│   │       └── timetable.validator.ts
 │   ├── scripts/
-│   │   └── seed.ts           # Development data generation script
-│   └── Dockerfile            # Backend Container build strategy
-│
-├── frontend/                 # Vite + React Interface
+│   │   └── seed.ts
+│   ├── package.json
+│   └── Dockerfile
+├── frontend/
 │   ├── src/
-│   │   ├── components/       # Reusable UI Elements (AppLayout, Cards)
-│   │   ├── lib/              # Axios instance and Utility classes
-│   │   ├── pages/            # Login, Dashboards and Routes
-│   │   └── store/            # Zustand global state (authStore)
-│   ├── tailwind.config.js    # Design tokens & color system
-│   ├── nginx.conf            # Nginx routing logic for Docker
-│   └── Dockerfile            # Frontend Container build strategy
-│
-└── docker-compose.yml        # Orchestration (Mongo, Backend, Frontend)
+│   │   ├── components/
+│   │   │   └── AppLayout.tsx
+│   │   ├── lib/
+│   │   │   ├── axios.ts
+│   │   │   └── utils.ts
+│   │   ├── pages/
+│   │   │   ├── AdminNotifications.tsx
+│   │   │   ├── AdminStudents.tsx
+│   │   │   ├── Attendance.tsx
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── Notifications.tsx
+│   │   │   ├── TeacherAnalytics.tsx
+│   │   │   ├── TeacherAttendance.tsx
+│   │   │   └── Timetable.tsx
+│   │   ├── store/
+│   │   │   └── authStore.ts
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── nginx.conf
+│   └── Dockerfile
+├── docker-compose.yml
+└── README.md
 ```
 
----
+## Prerequisites
 
-## 🛠️ How to Run the Project
+- Node.js 18+
+- npm
+- Docker Desktop (for Docker setup)
+- MongoDB locally (only for non-Docker setup)
 
-You can run SAMS in two ways:
+## Installation and Setup
 
-- **Option A:** Local development (frontend + backend with local MongoDB)
-- **Option B:** Full Docker stack (recommended for quick setup)
-
-### Prerequisites
-
-- **Node.js** (v18+)
-- **Docker Desktop** (required for Docker option)
-- **MongoDB** (required only for local development option)
-
-### Option A: Run Locally (without Docker)
-
-1. Install dependencies:
+### 1) Clone and install dependencies
 
 ```bash
+git clone <your-repo-url>
+cd SAMS-update
+
 cd backend
 npm install
+
 cd ../frontend
 npm install
-cd ..
 ```
 
-1. Set backend environment in `backend/.env`:
+### 2) Configure backend environment
+
+Create `backend/.env`:
 
 ```env
 PORT=5000
@@ -98,7 +119,11 @@ BCRYPT_ROUNDS=12
 CORS_ORIGIN=http://localhost:5173
 ```
 
-1. Start MongoDB locally (make sure it is running on port `27017`).
+## Run Modes
+
+### Option A: Local Development (Node + local MongoDB)
+
+1. Start MongoDB on `localhost:27017`.
 2. Start backend:
 
 ```bash
@@ -106,143 +131,110 @@ cd backend
 npm run dev
 ```
 
-1. In a new terminal, start frontend:
+3. Start frontend in a new terminal:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-1. Op
+4. Seed data (required for test login):
 
-- Frontend: [http://localhost:5173](http://localhost:5173)
-- Backend health: [http://localhost:5000/health](http://localhost:5000/health)
-- Login: use the seeded demo accounts (see **Built-in Test Accounts** below)
+```bash
+cd backend
+npm run seed
+```
 
-### Option B: Run with Docker Compose
+5. Open:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Backend health: [http://localhost:5000/health](http://localhost:5000/health)
 
-1. From project root (where `docker-compose.yml` exists), run:
+### Option B: Docker Compose
+
+1. From project root:
 
 ```bash
 docker-compose up --build -d
 ```
 
-1. Validate containers:
+2. Check running services:
 
 ```bash
 docker-compose ps
 ```
 
-You should see:
+Expected services:
+- `sams-backend`
+- `sams-frontend`
+- `attendance-mongodb`
+- `sams-mongo-express`
 
-1. `sams-frontend`
-2. `sams-backend`
-3. `attendance-mongodb`
-4. `sams-mongo-express`
-
-1. Seed the database:
+3. Seed the database:
 
 ```bash
 docker exec -it sams-backend npm run seed
 ```
 
-1. Open:
-
-- Frontend: use `docker-compose ps` and open the host port mapped to container port `80`
-- Backend health: use `docker-compose ps` and open `http://localhost:<backend_port>/health` where `<backend_port>` maps to container port `5000`
+4. Open:
+- Frontend: use `docker-compose ps` and open host port mapped to container `80`
+- Backend health: open host port mapped to container `5000` + `/health`
 - Mongo Express: [http://localhost:8081](http://localhost:8081)
-  - Username: `admin`
-  - Password: `admin123`
 
-### Important: How Frontend connects to Backend
+## Login Credentials (Important)
 
-- The frontend calls the API via **relative** URLs (`/api/...`).
-- **Docker mode**: Nginx in the frontend container proxies `/api/`* to the backend container.
-- **Local dev mode**: Vite dev server proxies `/api/`* to `http://localhost:5000`.
+### SAMS App login credentials (after seed)
 
----
+Use these in the app login form:
 
-## 🌍 Accessing the Application
+- Admin: `ADMIN001` / `Admin@123` (role: `admin`)
+- Teacher: `TCH001` / `Teacher@123` (role: `teacher`)
+- Student: `STU001` / `Student@123` (role: `student`)
 
-Now that the system is fully running, you can access the environments using either local ports (Option A) or Docker mapped ports (Option B).
+### Mongo Express credentials (NOT app login)
 
-### 1. Frontend Application
+Only for [http://localhost:8081](http://localhost:8081):
 
-- **Local run (Option A)**: [http://localhost:5173](http://localhost:5173)
-- **Docker run (Option B)**: run `docker-compose ps` and open the host port mapped to container port `80`
+- Username: `admin`
+- Password: `admin123`
 
-### 2. Database Administrator Panel (Mongo Express)
+## Routes by Role
 
-- **URL**: [http://localhost:8081](http://localhost:8081)
-- **Username**: `admin`
-- **Password**: `admin123`
-*(This GUI allows you to safely look inside MongoDB and verify records without terminal queries).*
+- Student: `/`, `/attendance`, `/timetable`, `/notifications`
+- Teacher: `/`, `/teacher/attendance`, `/teacher/analytics`, `/timetable`
+- Admin: `/`, `/admin/students`, `/admin/notifications`
 
-### 3. Backend API Service
+## Common Troubleshooting
 
-- **Local run (Option A)**: [http://localhost:5000/health](http://localhost:5000/health)
-- **Docker run (Option B)**: run `docker-compose ps` and open `http://localhost:<backend_port>/health` where `<backend_port>` maps to container port `5000`
-*(If you see `{ "status": "ok" }`, your backend is online and accepting API streams).*
+### Mongo URI undefined / backend fails to connect
 
-### 4. Notes on Ports
+- Ensure `backend/.env` exists.
+- Ensure `MONGO_URI` is present in `.env`.
+- Restart backend after editing `.env`.
 
-- In local backend dev mode, if port `5000` is already in use, the server automatically falls back to another free port and logs the exact URL.
-- In Docker mode, frontend and backend host ports are assigned dynamically to avoid port-collision failures on busy machines.
+### Invalid credentials on login
 
----
+- Seed database first (`npm run seed` in backend).
+- Use `ADMIN001` / `Admin@123` (not `admin/admin123`).
+- Ensure correct role selected in login form.
 
-## ✅ Available Role Pages (Frontend)
+### API not reachable from frontend
 
-After login, pages are available based on role:
+- Confirm backend is running and `/health` returns `{ status: "ok" }`.
+- In local mode, ensure frontend runs on `5173` and backend on `5000`.
 
-- **Student**
-  - `/` Dashboard
-  - `/attendance` My Attendance (+ **Download PDF**)
-  - `/timetable` Timetable
-  - `/notifications` Notifications
-- **Teacher**
-  - `/` Dashboard
-  - `/teacher/attendance` Mark Attendance
-  - `/timetable` Timetable
-  - `/teacher/analytics` Analytics (+ **Download PDF**)
-- **Admin**
-  - `/` Dashboard
-  - `/admin/students` Student Management (deactivate)
-  - `/admin/notifications` Notification Center
-
-### Logout
-
-- A **Logout** button is available on every protected page via the shared `AppLayout` (sidebar + top header).
-
-## 📄 PDF Reports (APIs)
-
-- **Student report**: `GET /api/student/report/pdf`
-- **Teacher report**: `GET /api/teacher/report/pdf`
-
----
-
-## 🔐 Built-in Test Accounts
-
-The seed script generated the following ready-to-use profiles. You can use these down the frontend portal:
-
-
-| Role              | User ID    | Password      |
-| ----------------- | ---------- | ------------- |
-| **Admin Panel**   | `ADMIN001` | `Admin@123`   |
-| **Teacher Panel** | `TCH001`   | `Teacher@123` |
-| **Student Panel** | `STU001`   | `Student@123` |
-
-
-*(Note: The system contains TCH001 to TCH005 and STU001 to STU050)*
-
----
-
-## 🛑 Stopping the Application
-
-When you want to spin everything down and release system memory, run:
+## Useful Commands
 
 ```bash
+# Local backend
+cd backend && npm run dev
+
+# Local frontend
+cd frontend && npm run dev
+
+# Seed
+cd backend && npm run seed
+
+# Docker up/down
+docker-compose up --build -d
 docker-compose down
 ```
-
-*Note: Because volumes are configured in the `docker-compose.yml`, MongoDB standard data is persisted safely to disk. Next time you run `up`, the data will still be there unless you forcefully delete volumes.*

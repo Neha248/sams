@@ -1,8 +1,12 @@
-import 'dotenv/config';
 import http from 'node:http';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import app from './app';
 import { connectDB } from './config/db';
 import { logger } from './utils/logger';
+
+const envPath = path.resolve(process.cwd(), '.env');
+dotenv.config({ path: envPath });
 
 const PORT = Number(process.env.PORT) || 5000;
 
