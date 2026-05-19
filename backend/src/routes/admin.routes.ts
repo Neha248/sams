@@ -10,6 +10,9 @@ import {
   exportStudentsAttendance,
   getTeachersAssignmentsOverview,
   deleteTeacher,
+  getTimetableOverviewHandler,
+  updateTimetable,
+  deleteTimetable,
 } from '../controllers/admin.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorizeRoles } from '../middlewares/role.middleware';
@@ -38,8 +41,11 @@ router.get('/departments', getAllDepartments);
 router.post('/department/create', createDepartment);
 router.post('/subject/create', createSubject);
 
+router.get('/timetable/overview', getTimetableOverviewHandler);
 router.post('/timetable/create', createTimetable);
 router.put('/timetable/publish', publishTimetable);
+router.put('/timetable/:id', updateTimetable);
+router.delete('/timetable/:id', deleteTimetable);
 
 router.post('/notifications/send', sendNotification);
 

@@ -18,7 +18,7 @@ export type TeacherAssignmentRow = {
 function matchesSearch(
   profile: {
     employeeId: string;
-    userId?: { fullName?: string; userId?: string; email?: string };
+    userId?: { fullName?: string; userId?: string; email?: string } | null;
   },
   search: string
 ): boolean {
@@ -55,7 +55,7 @@ export async function getTeacherAssignmentsOverview(params: {
     } | null;
 
     if (user?.isActive === false) continue;
-    if (!matchesSearch(profile as { employeeId: string; userId?: typeof user }, params.search ?? '')) {
+    if (!matchesSearch({ employeeId: profile.employeeId, userId: user }, params.search ?? '')) {
       continue;
     }
 

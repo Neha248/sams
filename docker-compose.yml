@@ -2,8 +2,9 @@ services:
   backend:
     build: ./backend
     container_name: sams-backend
+    # Docker API: host 5000. Local npm dev uses PORT=5001 in backend/.env (no conflict).
     ports:
-      - "0:5000"
+      - "5000:5000"
     depends_on:
       - mongodb
     env_file:
@@ -47,7 +48,7 @@ services:
     build: ./frontend
     container_name: sams-frontend
     ports:
-      - "0:80"
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped

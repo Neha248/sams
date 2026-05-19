@@ -19,6 +19,7 @@
   - Admin portals: student attendance overview, teacher assignment CRUD (create/remove), department faculty analytics.
   - Multi-semester cohorts (seed + filters on semesters 1, 3, 5, 7).
   - PDF export for reports using `pdfkit`.
+  - Admin Timetable portal (`/admin/timetable`): filterable schedule table with slot UID, teacher, subject, department, section, semester, timing; add/edit/delete slots and cohort publish.
 - **Long-term vision**: To become a highly scalable, multi-tenant capable educational ERP that can be easily deployed by various institutions seeking a premium software experience.
 
 ## Project Status
@@ -36,6 +37,8 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Admin Teachers portal** (`/admin/teachers`): Separate route from students; assignment table; create via `AssignTeacherModal`; soft-remove via `DELETE /api/admin/teacher/:profileId` — `adminTeacher.service.ts`.
 - ✅ **Admin Department dashboard** (`/`): Faculty attendance table + assign teacher (Stitch Academic Intelligence theme).
 - ✅ **Multi-semester seed data**: Students, teachers, subjects, timetables, and attendance distributed across semesters **1, 3, 5, 7** (`backend/scripts/seed.ts`).
+- ✅ **Admin Timetable portal** (`/admin/timetable`): Department/semester/section filters, schedule table (UID, teacher login, subject, department, section, semester, timing), add/edit/delete slots, cohort publish — `adminTimetable.service.ts`, `AdminTimetable.tsx`, `TimetableSlotModal`, `TimetableOverviewTable`.
+- ✅ **Local dev tooling (Windows)**: `docker-compose.mongo.yml` (MongoDB-only), `scripts/start-mongo.ps1`, `scripts/free-port.ps1` (Node-only, port **5001**); local backend **5001** + Docker backend **5000** can coexist; Vite proxies via `frontend/.env.development`.
 
 #### In Progress:
 - 🚧 **Attendance tracking**: Core schemas and seed data done. Teacher attendance UI grids and 75% visual checks are partially implemented but need complete interactive integration.
@@ -456,6 +459,22 @@ This section defines the API endpoints, request/response models, authorization r
 - **Actual Codebase Endpoint**: `/api/admin/faculty-attendance?departmentId={id}`
 - **Service Used**: `getFacultySubjectAttendanceByDepartment()` in `adminAttendance.service.ts`.
 
+#### 10. `GET /timetable/overview`
+- **Purpose**: Admin timetable tab — list slots with UID, teacher, subject, department, section, semester, timing.
+- **Actual Codebase Endpoint**: `/api/admin/timetable/overview?departmentId=&semester=&section=&search=`
+- **Service Used**: `getTimetableOverview()` in `adminTimetable.service.ts`.
+- **Models Touched**: `Timetable`, `Subject`, `Department`, `User` (Read).
+
+#### 11. `PUT /timetable/:id` / `DELETE /timetable/:id`
+- **Purpose**: Update or remove a single timetable slot from the admin Timetable dashboard.
+- **Validators**: `updateTimetableSchema` (PUT) in `timetable.validator.ts`.
+- **Models Touched**: `Timetable` (Write / Delete).
+
+#### 12. `PUT /timetable/publish`
+- **Purpose**: Publish all draft slots for a department + semester + section cohort.
+- **Request Body**: `{ "departmentId": "...", "semester": 5, "section": "A" }`
+- **Validator**: `publishTimetableSchema` in `timetable.validator.ts`.
+
 ### Admin API Route Map (`backend/src/routes/admin.routes.ts`)
 
 | Method | Path | Handler |
@@ -477,7 +496,10 @@ This section defines the API endpoints, request/response models, authorization r
 | POST | `/department/create` | `createDepartment` |
 | POST | `/subject/create` | `createSubject` |
 | POST | `/timetable/create` | `createTimetable` |
+| GET | `/timetable/overview` | `getTimetableOverviewHandler` |
 | PUT | `/timetable/publish` | `publishTimetable` |
+| PUT | `/timetable/:id` | `updateTimetable` |
+| DELETE | `/timetable/:id` | `deleteTimetable` |
 | POST | `/notifications/send` | `sendNotification` |
 
 ## Frontend Routing Structure
@@ -551,6 +573,7 @@ Admin sidebar (`AdminSidebar.tsx`):
 | Departments | `/` |
 | Students | `/admin/students` |
 | Teachers | `/admin/teachers` |
+| Timetable | `/admin/timetable` |
 | Reports / Settings | `/admin/notifications` (placeholder) |
 
 #### 1. Route: `/admin/students` (Student Attendance Overview)
@@ -569,7 +592,15 @@ Admin sidebar (`AdminSidebar.tsx`):
 - **Expected Behavior**: Lists one row per teacher–subject assignment. **All Departments** works (no forced default dept). **Assign New Teacher** requires a specific department (not All). **Remove** soft-deletes teacher on first row of each lecturer. See [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview).
 - **Role Access**: `admin`
 
-#### 3. Route: `/admin/notifications` (Institutional Broadcast Console)
+#### 3. Route: `/admin/timetable` (Timetable Management)
+- **Page Owner**: `AdminTimetable.tsx`
+- **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SectionFilterSelect`, `SearchField`, `TimetableOverviewTable`, `TimetableSlotModal`
+- **Store Dependencies**: `useAuthStore` (validates admin credentials).
+- **API Dependencies**: `GET /api/admin/timetable/overview`, `POST /api/admin/timetable/create`, `PUT /api/admin/timetable/:id`, `DELETE /api/admin/timetable/:id`, `PUT /api/admin/timetable/publish`, `GET /api/admin/departments`, `GET /api/admin/subjects`, `GET /api/admin/teachers`
+- **Expected Behavior**: Lists timetable slots with **UID** (slot code `TT-XXXXXX`), **teacher** (name + login ID), **subject**, **department**, **section**, **semester**, and **timing** (day, start–end, room). Filters: department (All or specific), semester, section, search. **Add Slot** / row **Edit** / **Delete** require a specific department. **Publish Cohort** marks all slots for the selected department + semester + section as `isPublished`. See [Admin Timetable Tab](#admin-timetable-tab--schedule-management).
+- **Role Access**: `admin`
+
+#### 4. Route: `/admin/notifications` (Institutional Broadcast Console)
 - **Page Owner**: `AdminNotifications.tsx`
 - **Components Used**: Broadcast scope checkboxes (Global, Department, Section), rich message editor cards, priority level markers.
 - **Store Dependencies**: `useAuthStore` (reads sender profile metadata).
@@ -580,44 +611,53 @@ Admin sidebar (`AdminSidebar.tsx`):
 ## Folder Structure Documentation
 
 ```text
-SAMS-update/
+sams/
 │
 ├── backend/
 │   ├── src/
-│   │   ├── config/
+│   │   ├── config/             # db.ts (Mongoose, IPv4)
 │   │   ├── controllers/
 │   │   ├── middlewares/
 │   │   ├── models/
 │   │   ├── routes/
-│   │   ├── services/
+│   │   ├── services/           # adminStudent, adminTeacher, adminAttendance, adminTimetable, pdf
 │   │   ├── utils/
 │   │   └── validators/
-│   ├── scripts/
+│   ├── scripts/                # seed.ts
+│   ├── .env                    # local: MONGO_URI=127.0.0.1:27017
 │   ├── package.json
 │   └── Dockerfile
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── atoms/          # MaterialIcon, etc.
-│   │   │   ├── molecules/      # DepartmentFilterSelect, SemesterFilterSelect, SearchField, NavItem
-│   │   │   ├── organisms/      # AdminSidebar, StudentOverviewTable, TeacherAssignmentsTable, AssignTeacherModal, FacultyTable
+│   │   │   ├── atoms/
+│   │   │   ├── molecules/      # DepartmentFilterSelect, SemesterFilterSelect, SectionFilterSelect, SearchField, NavItem
+│   │   │   ├── organisms/      # AdminSidebar, TimetableOverviewTable, TimetableSlotModal, …
 │   │   │   ├── templates/      # AdminStitchLayout
-│   │   │   └── AppLayout.tsx   # Neo-Shinjuku layout (student/teacher)
-│   │   ├── lib/                # axios.ts, download.ts, utils.ts
+│   │   │   └── AppLayout.tsx
+│   │   ├── lib/                # axios.ts (baseURL /api), download.ts, utils.ts
 │   │   ├── pages/
 │   │   │   ├── admin/DepartmentDashboard.tsx
 │   │   │   ├── AdminStudents.tsx
 │   │   │   ├── AdminTeachers.tsx
+│   │   │   ├── AdminTimetable.tsx
 │   │   │   └── …
 │   │   ├── store/
-│   │   ├── App.tsx
+│   │   ├── App.tsx             # admin routes under AdminStitchLayout path="/"
 │   │   └── main.tsx
-│   ├── package.json
+│   ├── .env.example            # VITE_API_PROXY_TARGET
+│   ├── .env.development        # VITE_API_PROXY_TARGET → 5001
+│   ├── vite.config.ts          # proxies /api → 5001 (local dev)
 │   ├── nginx.conf
 │   └── Dockerfile
 │
-├── docker-compose.yml
+├── scripts/
+│   ├── start-mongo.ps1
+│   └── free-port.ps1
+├── docker-compose.yml          # full stack (prod-like)
+├── docker-compose.mongo.yml    # MongoDB only (local npm dev)
+├── AGENT.md
 └── README.md
 ```
 
@@ -681,7 +721,7 @@ SAMS-update/
 - **Why it exists:** Abstracts complexity away from controllers.
 - **Dependencies:** Models, Utils.
 - **Rules:** Can be called by multiple controllers.
-- **Examples:** `pdf.service.ts`, `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`.
+- **Examples:** `pdf.service.ts`, `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`, `adminTimetable.service.ts`.
 - **Future expansion possibilities:** Notification dispatch services, reporting engines.
 
 ### `backend/src/utils/`
@@ -1034,13 +1074,14 @@ This section documents the environmental configuration settings needed to run SA
 #### 1. `PORT`
 - **Purpose**: Defines the TCP port number on which the Express REST API backend listens.
 - **Required/Optional**: Optional (will fallback to default if not provided).
-- **Default Value**: `5000`
+- **Default Value**: `5001` (local `backend/.env`); `5000` inside Docker (`docker-compose.yml`).
 - **Security Rules**: In production, do not expose this port directly to the public web. Ensure all traffic flows through an Nginx reverse proxy layer mapping standard HTTPS (443) down to the internal docker container gateway port.
 
 #### 2. `MONGO_URI`
 - **Purpose**: The connection string containing database server address, credentials, ports, and default database names for Mongoose.
 - **Required/Optional**: Required.
-- **Default Value**: `mongodb://localhost:27017/attendance_system`
+- **Default Value (local `npm run dev`)**: `mongodb://127.0.0.1:27017/attendance_system` — prefer `127.0.0.1` over `localhost` on Windows to avoid IPv6 (`::1`) connection issues.
+- **Default Value (full Docker stack)**: `mongodb://mongodb:27017/attendance_system` (Docker service hostname).
 - **Security Rules**: **CRITICAL SECURITY RISK**. Never commit actual database passwords or hostnames into public version control. In production, utilize secure environment variables or vault keys, and enforce IP-whitelisting on the MongoDB server to only allow connections from the backend proxy IP.
 
 #### 3. `JWT_SECRET`
@@ -1075,20 +1116,35 @@ This section documents the environmental configuration settings needed to run SA
 The frontend is a static React application built via Vite. In Vite, environment variables must be prefixed with `VITE_` to be exposed to the client bundle.
 - **Key Variables**:
   - `VITE_API_URL`: Mapped to the backend URL endpoint (e.g., `http://localhost:5000` in dev or `https://sams.edu/api` in prod).
+  - `VITE_API_PROXY_TARGET`: **Local dev only** — where `vite.config.ts` proxies `/api` (default `http://localhost:5001` via `frontend/.env.development`). Docker full-stack backend remains on **5000**.
 - **Behavior**: Loaded from `.env.local` or `.env.production`. At build time, these variables are compiled into static JS assets, meaning **no secrets must ever be stored here**.
+- **Admin routing (dev)**: Log in as **admin**, then open `http://localhost:5173/admin/timetable`. Nested routes are declared in `App.tsx` under `AdminStitchLayout` (`path="admin/timetable"`).
 
 #### 2. Backend Environment (`backend/`)
 The Node.js server reads backend environment settings at initialization via the `dotenv` package.
 - **Key Variables**: `PORT`, `NODE_ENV`, `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `BCRYPT_ROUNDS`, `CORS_ORIGIN`.
 - **Behavior**: Loaded from `backend/.env`. Governs database connection options, JWT security seeds, and Bcrypt hashing difficulties.
+- **Database client** (`backend/src/config/db.ts`): Mongoose connects with `family: 4` (IPv4) and `serverSelectionTimeoutMS: 10000`. On connection failure the process **exits** — there is no API without MongoDB.
+- **Port binding** (`backend/src/server.ts`): Listens on `PORT` (default **`5001`** for local `.env`). If the port is in use (`EADDRINUSE`), the server **exits** (no random fallback). Vite proxies to the same port via `VITE_API_PROXY_TARGET`.
 
-#### 3. Docker Compose Environment (`docker-compose.yml`)
+#### 3. Docker Compose — full stack (`docker-compose.yml`)
 When running inside containers, environment variables are defined directly inside `docker-compose.yml` or a root-level `.env` file to orchestrate inter-container communication.
 - **Key Variables**:
   - `MONGO_URI`: Must resolve to the containerized service name instead of localhost, i.e., `mongodb://mongodb:27017/attendance_system`.
   - `MONGO_INITDB_ROOT_USERNAME` & `MONGO_INITDB_ROOT_PASSWORD`: Secure root login credentials for the MongoDB container.
   - `ME_CONFIG_MONGODB_ADMINUSERNAME` & `ME_CONFIG_MONGODB_ADMINPASSWORD`: Credentials mapped to the Mongo-Express web GUI panel.
 - **Behavior**: Enables immediate system setup via local Docker DNS resolution mappings.
+- **Ports (host)**: Backend `5000:5000`, Frontend `3000:80`, MongoDB `27017:27017`, Mongo Express `8081:8081`.
+
+#### 3b. Docker Compose — MongoDB only (`docker-compose.mongo.yml`)
+Use when developing with **local** `npm run dev` for backend and frontend (Vite on `5173`).
+
+| Service | Container | Host port |
+| :--- | :--- | :--- |
+| `mongodb` | `attendance-mongodb` | `27017` |
+
+- **Start**: `docker compose -f docker-compose.mongo.yml up -d` or `.\scripts\start-mongo.ps1` (requires Docker Desktop running).
+- **Port split**: Docker backend → host **5000**; local `npm run dev` backend → **5001**. They can run together; only MongoDB is required from Docker for hybrid dev.
 
 #### 4. Production Environment
 Production setups require hardened deployment configurations.
@@ -1157,7 +1213,116 @@ graph TD
 3. **Existing Patterns Layer**: Search the codebase for similar pre-existing routines or helper flows and mirror their syntax.
 4. **New Implementation Layer**: Only if the task cannot be mapped to any existing structural paradigm, proceed with building custom modules.
 
+## Local Development (Recommended)
+
+Hybrid setup: **MongoDB in Docker**, **backend + frontend via npm**. Avoids port clashes and matches how most contributors run SAMS daily.
+
+### Prerequisites
+
+- Node.js 18+, npm
+- Docker Desktop (for MongoDB only), **or** MongoDB Community Server installed on Windows
+- `backend/.env` (copy from `backend/.env.example`)
+
+### Startup sequence (Windows PowerShell)
+
+From project root (`sams/`):
+
+```powershell
+# 1) MongoDB on 27017
+.\scripts\start-mongo.ps1
+
+# 2) Free port 5001 if needed (Node only — does not kill Docker)
+.\scripts\free-port.ps1
+
+# 3) Backend (must show http://localhost:5001)
+cd backend
+npm run seed    # first time or empty DB
+npm run dev
+
+# 4) Frontend (separate terminal; restart after port changes)
+cd frontend
+npm run dev
+```
+
+### URLs
+
+| Service | URL |
+| :--- | :--- |
+| Frontend (Vite) | http://localhost:5173 |
+| Backend health (local npm) | http://localhost:5001/health |
+| Backend health (Docker full stack) | http://localhost:5000/health |
+| Admin timetable | http://localhost:5173/admin/timetable (login as **admin**) |
+| Mongo Express | http://localhost:8081 (only if full stack or mongo-express is running) |
+
+### Dev scripts (`scripts/`)
+
+| Script | Purpose |
+| :--- | :--- |
+| `start-mongo.ps1` | Starts `docker-compose.mongo.yml` (MongoDB container on `27017`). |
+| `free-port.ps1` | Frees port **5001** by stopping **Node only** (skips Docker/WSL). Optional `-Port 5000 -Force` — avoid; can break Docker. |
+
+### API proxy (Vite)
+
+- `frontend/.env.development`: `VITE_API_PROXY_TARGET=http://localhost:5001`
+- `frontend/vite.config.ts` proxies `/api` → that target (fallback `5001`).
+- Override in `frontend/.env.local` if needed.
+- Axios `baseURL` is `/api` — never hardcode `localhost:5000` in page components.
+
+### Full Docker stack (alternative)
+
+```powershell
+docker-compose up --build -d
+docker exec -it sams-backend npm run seed
+```
+
+- Frontend: http://localhost:3000 (Nginx, not 5173)
+- Full stack uses port **5000** for API; local hybrid dev uses **5001** — no conflict if both run.
+
+---
+
+## Local Dev Troubleshooting
+
+### MongoDB `ECONNREFUSED` on 27017
+
+| Cause | Fix |
+| :--- | :--- |
+| **MongoDB not running** | Start Docker Desktop, then `.\scripts\start-mongo.ps1` from project root, or start Windows **MongoDB Server** service. |
+| **Docker stopped** | `docker compose -f docker-compose.mongo.yml up -d` — use **mongo-only** compose, not full stack, when developing with `npm run dev`. |
+| **IPv6 localhost** | Use `MONGO_URI=mongodb://127.0.0.1:27017/attendance_system` in `backend/.env` (not `localhost`). |
+
+### Port 5001 already in use (local backend won’t start)
+
+| Cause | Fix |
+| :--- | :--- |
+| **Old `npm run dev` still running** | From project root: `.\scripts\free-port.ps1` (default port **5001**, Node only). |
+| **Wrong PORT in `.env`** | Local dev should use `PORT=5001` in `backend/.env`. Docker uses `5000` inside `docker-compose.yml`. |
+| **Killed Docker by mistake** | Never run `free-port.ps1 -Port 5000` without `-Force`; default script skips Docker. Restart Docker Desktop and `.\scripts\start-mongo.ps1`. |
+
+### Vite proxy / API errors (login or timetable fails)
+
+| Cause | Fix |
+| :--- | :--- |
+| **Proxy points to wrong port** | Ensure `frontend/.env.development` has `VITE_API_PROXY_TARGET=http://localhost:5001` and **restart** `npm run dev` in `frontend/`. |
+| **Backend on 5000, proxy on 5001** | Align both: `backend/.env` → `PORT=5001`, restart backend. |
+
+### `/admin/timetable` shows "Route not found"
+
+This message is returned by the **Express** API (`app.ts` 404 handler), not React Router. The page route is valid; the failing call is usually `GET /api/admin/timetable/overview`.
+
+| Cause | Fix |
+| :--- | :--- |
+| **Stale API on port 5000** | That is the **Docker** backend. Local Vite uses **5001** — run `npm run dev` in `backend/` and hit `http://localhost:5001/health`. |
+| **PORT mismatch** | Backend `PORT` and `VITE_API_PROXY_TARGET` must match (default **5001**). Restart both servers after edits. |
+| **Frontend compile error** | Invalid JSX in `AdminTimetable.tsx` prevents the route from loading; check the Vite terminal for parse errors and restart `npm run dev` after fixing. |
+| **Not logged in as admin** | Timetable is admin-only. Use `ADMIN001` / `Admin@123` with role **admin**. |
+
+**Verify API:** `GET http://localhost:5001/health` then `GET http://localhost:5001/api/admin/timetable/overview` (with admin JWT) should succeed, not `{ message: "Route not found" }`.
+
+---
+
 ## Development Workflow
+
+**Daily local run:** See [Local Development (Recommended)](#local-development-recommended). Confirm MongoDB on `27017`, backend on **`5001`**, Vite on `5173`.
 
 **Feature creation process:**
 1. **Requirement:** Read the goal (e.g., "Add Subject creation for Admins").
@@ -1166,7 +1331,7 @@ graph TD
 4. **Component/Model creation:** Create the Mongoose Model (if new) and the React component.
 5. **State setup:** Define Zod schemas in `validators/`, add types in frontend.
 6. **API integration:** Build Controller -> Route, test via REST client or Swagger (if applicable), then integrate Axios call on frontend.
-7. **Testing:** Run backend locally, ensure UI works correctly and handles errors.
+7. **Testing:** Run [hybrid local dev](#local-development-recommended); ensure UI works and errors surface in the page (axios returns backend `message`).
 8. **Final integration:** Build docker containers to test the production setup via `docker-compose up --build`.
 
 ## Final Product Vision
@@ -1246,7 +1411,7 @@ This section provides an immediate high-level summary of implemented features ve
 
 ### 7. Admin Student & Teacher Management Portals
 - **Current State**:
-  - Dedicated `/admin/students` and `/admin/teachers` routes with Academic Intelligence (Stitch) theme.
+  - Dedicated `/admin/students`, `/admin/teachers`, and `/admin/timetable` routes with Academic Intelligence (Stitch) theme.
   - Filters: department (including All), semester (1/3/5/7), search.
   - Teachers: create (`AssignTeacherModal`), list assignments, soft-remove (`DELETE /teacher/:profileId`).
   - Students: attendance breakdown, chart, CSV export.
@@ -1262,10 +1427,11 @@ This section provides an immediate high-level summary of implemented features ve
 - **What the project is:** A full-stack, Dockerized Node/React ERP system for managing educational attendance (Admin, Teacher, Student workflows).
 - **How folders work:** Backend: `controllers` → `services` → `models`. Frontend: `pages` orchestrate; `components/{atoms,molecules,organisms,templates}` for UI; admin uses `AdminStitchLayout`, student/teacher use `AppLayout` (Neo-Shinjuku).
 - **Architecture:** Node.js/Express (Backend) + React/Vite (Frontend) + MongoDB. Connected via REST API and JWT Auth.
-- **Admin URLs:** `/` (departments), `/admin/students`, `/admin/teachers`, `/admin/notifications`.
-- **Key admin services:** `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`.
+- **Admin URLs:** `/` (departments), `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications`.
+- **Key admin services:** `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`, `adminTimetable.service.ts`.
 - **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding. Admin UI = Stitch light glass; student/teacher UI = Neo-Shinjuku dark.
 - **Seed:** `npm run seed` in `backend/` — semesters **1, 3, 5, 7**; login `ADMIN001` / `Admin@123`.
+- **Local dev:** MongoDB via `.\scripts\start-mongo.ps1`; backend on **5001**, Vite proxy **5001**; `free-port.ps1` frees **5001** without killing Docker on **5000**. See [Local Development (Recommended)](#local-development-recommended).
 - **Final objective:** Produce an enterprise-grade, visually stunning, and rock-solid platform for managing institution attendance data with zero friction.
 
 ---
@@ -1468,6 +1634,109 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 ---
 
+## Admin Timetable Tab — Schedule Management
+
+**Route:** `/admin/timetable`  
+**Page:** `frontend/src/pages/AdminTimetable.tsx`  
+**Theme:** Academic Intelligence (Stitch admin layout)
+
+### Table columns
+
+| Column | Description |
+| :--- | :--- |
+| **UID** | Slot code `TT-{last6OfMongoId}` (unique per timetable entry). |
+| **Teacher** | Full name + login `userId` (e.g. `TCH001`). |
+| **Subject** | Subject name + code. |
+| **Department** | Department name for the slot. |
+| **Section** | Cohort section (`A`–`D`). |
+| **Semester** | Academic semester (1–8; seed uses 1, 3, 5, 7). |
+| **Timing** | `Day · HH:MM–HH:MM · Room {roomNo}`. |
+| **Status** | `Published` or `Draft` (`isPublished`). |
+| **Actions** | Edit / Delete (requires specific department filter). |
+
+### Features
+
+| Feature | Behavior |
+| :--- | :--- |
+| **Department filter** | **All Departments** or one department. Add/edit/publish require a **specific** department. |
+| **Semester filter** | All or **1–8**. |
+| **Section filter** | All or **A / B / C / D**. |
+| **Search** | UID, teacher login, name, subject, department, section, timing. |
+| **Add Slot** | Opens `TimetableSlotModal` → `POST /api/admin/timetable/create`. |
+| **Edit** | Same modal → `PUT /api/admin/timetable/:id`. |
+| **Delete** | Confirm → `DELETE /api/admin/timetable/:id`. |
+| **Publish Cohort** | `PUT /api/admin/timetable/publish` with `{ departmentId, semester, section }` — sets `isPublished: true` for matching slots. |
+
+### API: timetable overview
+
+- **Endpoint:** `GET /api/admin/timetable/overview?departmentId={optional}&semester={optional}&section={optional}&search={optional}`
+- **Service:** `backend/src/services/adminTimetable.service.ts` → `getTimetableOverview()`
+- **Auth:** JWT; `admin` only.
+
+**Response shape:**
+
+```json
+{
+  "slots": [
+    {
+      "id": "6649f3e9...",
+      "uid": "TT-A3F2E1",
+      "teacherName": "Dr. Sarah Miller",
+      "teacherUid": "TCH001",
+      "teacherId": "6649f3e4...",
+      "subjectName": "Database Systems",
+      "subjectCode": "CS-302",
+      "subjectId": "6649f3db...",
+      "departmentName": "Computer Science",
+      "departmentCode": "CS",
+      "departmentId": "6649f3da...",
+      "section": "A",
+      "semester": 5,
+      "day": "Monday",
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "timing": "Monday · 09:00–10:00 · Room 301",
+      "roomNo": "301",
+      "isPublished": true
+    }
+  ]
+}
+```
+
+### API: create / update / delete / publish
+
+| Method | Path | Validator | Purpose |
+| :--- | :--- | :--- | :--- |
+| POST | `/timetable/create` | `createTimetableSchema` | New slot |
+| PUT | `/timetable/:id` | `updateTimetableSchema` | Update slot fields |
+| DELETE | `/timetable/:id` | — | Remove slot |
+| PUT | `/timetable/publish` | `publishTimetableSchema` (body) | Publish cohort |
+
+**Create body** (same as existing timetable model):
+
+```json
+{
+  "departmentId": "...",
+  "semester": 5,
+  "section": "A",
+  "day": "Monday",
+  "startTime": "09:00",
+  "endTime": "10:00",
+  "subjectId": "...",
+  "teacherId": "...",
+  "roomNo": "301"
+}
+```
+
+### Atomic components (timetable tab)
+
+| Layer | Component |
+| :--- | :--- |
+| Molecule | `DepartmentFilterSelect`, `SemesterFilterSelect`, `SectionFilterSelect`, `SearchField` |
+| Organism | `TimetableOverviewTable`, `TimetableSlotModal` |
+
+---
+
 ## Seed Data — Multi-Semester Distribution
 
 **Script:** `backend/scripts/seed.ts` — run `npm run seed` from `backend/` (requires MongoDB).
@@ -1500,7 +1769,10 @@ Use **Semester** filter on `/admin/students` and `/admin/teachers` to view each 
 
 | Section | Topics |
 | :--- | :--- |
-| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers` |
+| [Local Development (Recommended)](#local-development-recommended) | Hybrid npm + MongoDB Docker, scripts, URLs |
+| [Local Dev Troubleshooting](#local-dev-troubleshooting) | MongoDB 27017, ports 5001/5000, Vite proxy |
+| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable` |
+| [Admin Timetable Tab](#admin-timetable-tab--schedule-management) | UID, timing, CRUD, publish |
 | [Admin Department Dashboard](#admin-department-dashboard-stitch-ui--faculty-table) | Faculty table, assign from dept view |
 | [Admin Students Tab](#admin-students-tab--student-details-overview) | Filters, Present/Absent rows, CSV |
 | [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview) | Assign, Remove, All Departments |

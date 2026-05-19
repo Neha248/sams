@@ -9,7 +9,12 @@ import Subject from '../models/Subject.model';
 import Timetable from '../models/Timetable.model';
 import Attendance from '../models/Attendance.model';
 import Notification from '../models/Notification.model';
-import { createTimetableSchema } from '../validators/timetable.validator';
+import {
+  createTimetableSchema,
+  publishTimetableSchema,
+  updateTimetableSchema,
+} from '../validators/timetable.validator';
+import { getTimetableOverview } from '../services/adminTimetable.service';
 import { sendSuccess, sendError } from '../utils/response';
 import { getFacultySubjectAttendanceByDepartment } from '../services/adminAttendance.service';
 import {
@@ -136,6 +141,24 @@ export const createSubject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// GET /api/admin/timetable/overview
+export const getTimetableOverviewHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, section, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getTimetableOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      section: typeof section === 'string' && section ? section : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
 // POST /api/admin/timetable/create
 export const createTimetable = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -148,12 +171,56 @@ export const createTimetable = async (req: Request, res: Response): Promise<void
   }
 };
 
-// PUT /api/admin/timetable/:id/publish
+// PUT /api/admin/timetable/:id
+export const updateTimetable = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parsed = updateTimetableSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const entry = await Timetable.findByIdAndUpdate(req.params.id, parsed.data, {
+      new: true,
+      runValidators: true,
+    });
+    if (!entry) {
+      sendError(res, 'Timetable slot not found', 404);
+      return;
+    }
+    sendSuccess(res, entry, 'Timetable entry updated');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// DELETE /api/admin/timetable/:id
+export const deleteTimetable = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const entry = await Timetable.findByIdAndDelete(req.params.id);
+    if (!entry) {
+      sendError(res, 'Timetable slot not found', 404);
+      return;
+    }
+    sendSuccess(res, null, 'Timetable entry removed');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// PUT /api/admin/timetable/publish
 export const publishTimetable = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { departmentId, semester, section } = req.query;
-    await Timetable.updateMany({ departmentId, semester, section }, { isPublished: true });
-    sendSuccess(res, null, 'Timetable published');
+    const parsed = publishTimetableSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const { departmentId, semester, section } = parsed.data;
+    await Timetable.updateMany(
+      { departmentId, semester, section: section.toUpperCase() },
+      { isPublished: true }
+    );
+    sendSuccess(res, null, 'Timetable published for cohort');
   } catch (err) {
     sendError(res, (err as Error).message);
   }

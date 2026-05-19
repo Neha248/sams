@@ -16,3 +16,11 @@ export const createTimetableSchema = z.object({
 });
 
 export type CreateTimetableInput = z.infer<typeof createTimetableSchema>;
+
+export const updateTimetableSchema = createTimetableSchema.partial();
+
+export const publishTimetableSchema = z.object({
+  departmentId: z.string().min(1),
+  semester: z.coerce.number().int().min(1).max(8),
+  section: z.string().min(1),
+});

@@ -14,6 +14,7 @@ import TeacherAnalytics from './pages/TeacherAnalytics.tsx';
 import AdminStudents from './pages/AdminStudents.tsx';
 import AdminTeachers from './pages/AdminTeachers.tsx';
 import AdminNotifications from './pages/AdminNotifications.tsx';
+import AdminTimetable from './pages/AdminTimetable.tsx';
 
 const RoleRoute = ({
   allowed,
@@ -47,11 +48,12 @@ function App() {
   if (isAdmin) {
     return (
       <Routes>
-        <Route element={<AdminStitchLayout />}>
-          <Route path="/" element={<DepartmentDashboard />} />
-          <Route path="/admin/students" element={<AdminStudents />} />
-          <Route path="/admin/teachers" element={<AdminTeachers />} />
-          <Route path="/admin/notifications" element={<AdminNotifications />} />
+        <Route path="/" element={<AdminStitchLayout />}>
+          <Route index element={<DepartmentDashboard />} />
+          <Route path="admin/students" element={<AdminStudents />} />
+          <Route path="admin/teachers" element={<AdminTeachers />} />
+          <Route path="admin/timetable" element={<AdminTimetable />} />
+          <Route path="admin/notifications" element={<AdminNotifications />} />
         </Route>
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

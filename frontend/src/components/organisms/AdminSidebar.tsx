@@ -6,6 +6,7 @@ const ADMIN_NAV = [
   { to: '/', icon: 'domain', label: 'Departments', end: true },
   { to: '/admin/students', icon: 'group', label: 'Students' },
   { to: '/admin/teachers', icon: 'school', label: 'Teachers' },
+  { to: '/admin/timetable', icon: 'calendar_month', label: 'Timetable' },
   { to: '/admin/notifications', icon: 'assessment', label: 'Reports' },
   { to: '/admin/notifications', icon: 'settings', label: 'Settings' },
 ];
