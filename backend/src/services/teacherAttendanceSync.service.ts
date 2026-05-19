@@ -76,3 +76,13 @@ export const updateClassStatus = async (payload: SyncStatusPayload): Promise<Syn
     transitioned: previousStatus !== currentStatus
   };
 };
+
+/**
+ * Architectural placeholder for updating the reactive dashboard status.
+ * Future flow: Attendance persist -> updateDashboardStatus() -> Pending -> Complete
+ */
+export const updateDashboardStatus = async (timetableId: string, status: 'pending' | 'complete') => {
+  console.log(`[Sync Engine] Dashboard Relay: Timetable ${timetableId} status synchronized to ${status}.`);
+  // TODO: Trigger live WebSocket event broadcast for terminal dashboard refresh
+  return { success: true };
+};

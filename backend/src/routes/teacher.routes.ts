@@ -11,7 +11,9 @@ import {
   getAttendanceDepartments,
   getAttendanceSections,
   getAttendanceSemesters,
-  getAttendanceSubjects
+  getAttendanceSubjects,
+  getAttendanceStudentList,
+  submitAttendance
 } from '../controllers/teacher.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorizeRoles } from '../middlewares/role.middleware';
@@ -33,5 +35,8 @@ router.get('/attendance/departments', getAttendanceDepartments);
 router.get('/attendance/sections', getAttendanceSections);
 router.get('/attendance/semesters', getAttendanceSemesters);
 router.get('/attendance/subjects', getAttendanceSubjects);
+
+router.post('/attendance/students', getAttendanceStudentList);
+router.post('/attendance/submit', submitAttendance);
 
 export default router;

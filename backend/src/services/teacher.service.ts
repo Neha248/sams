@@ -162,40 +162,40 @@ export interface DropdownItem {
 
 export const getAttendanceDepartmentsService = async (): Promise<DropdownItem[]> => {
   // TODO connect department collection
-  const departments = await Department.find().sort({ name: 1 });
-  return departments.map((d) => ({
-    id: d._id.toString(),
-    name: `${d.name} (${d.code})`
-  }));
+  return [
+    { id: "dept-1", name: "Computer Science (CS)" },
+    { id: "dept-2", name: "Electrical Engineering (EE)" },
+    { id: "dept-3", name: "Mechanical Engineering (ME)" }
+  ];
 };
 
 export const getAttendanceSectionsService = async (): Promise<DropdownItem[]> => {
   // TODO connect section collection
   return [
-    { id: 'A', name: 'Section A' },
-    { id: 'B', name: 'Section B' },
-    { id: 'C', name: 'Section C' }
+    { id: "A", name: "Section A" },
+    { id: "B", name: "Section B" },
+    { id: "C", name: "Section C" }
   ];
 };
 
 export const getAttendanceSemestersService = async (): Promise<DropdownItem[]> => {
   return [
-    { id: '1', name: 'Semester 1' },
-    { id: '2', name: 'Semester 2' },
-    { id: '3', name: 'Semester 3' },
-    { id: '4', name: 'Semester 4' },
-    { id: '5', name: 'Semester 5' },
-    { id: '6', name: 'Semester 6' },
-    { id: '7', name: 'Semester 7' },
-    { id: '8', name: 'Semester 8' }
+    { id: "1", name: "Semester 1" },
+    { id: "2", name: "Semester 2" },
+    { id: "3", name: "Semester 3" },
+    { id: "4", name: "Semester 4" },
+    { id: "5", name: "Semester 5" },
+    { id: "6", name: "Semester 6" },
+    { id: "7", name: "Semester 7" },
+    { id: "8", name: "Semester 8" }
   ];
 };
 
 export const getAttendanceSubjectsService = async (): Promise<DropdownItem[]> => {
   // TODO connect subject collection
-  const subjects = await Subject.find().sort({ name: 1 });
-  return subjects.map((s) => ({
-    id: s._id.toString(),
-    name: `${s.name} (${s.code})`
-  }));
+  return [
+    { id: "sub-1", name: "Discrete Mathematics (CS-101)" },
+    { id: "sub-2", name: "Data Structures (CS-202)" },
+    { id: "sub-3", name: "Database Systems (CS-303)" }
+  ];
 };

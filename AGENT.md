@@ -568,10 +568,15 @@ This section outlines client-side routes, their visual page layouts, component d
 
 #### 3. Route: `/teacher/analysis` (Performance Analysis Console)
 - **Page Owner**: `TeacherAnalytics.tsx`
-- **Components Used**: Risk category counts, subject completion charts, Recharts widgets.
+- **Components Used**: `AnalyticsFilters`, `AnalyticsTable`, `AttendanceOverviewChart`, `StudentTrendChart`, `ExportPanel` (Recharts).
 - **Store Dependencies**: `useAuthStore` (reads scope boundaries).
-- **API Dependencies**: `GET /api/teacher/analytics`
-- **Expected Behavior**: Renders read-only analytical heatmaps and graphs identifying students falling below compliance lines.
+- **API Dependencies**: `GET /api/teacher/analytics` (read-only; future query params: `department`, `semester`, `section`, `subject`, `studentName`, `universityRoll`, `classRoll`, `status`).
+- **Expected Behavior**:
+  - Attendance extraction terminal with cohort and student-level filters.
+  - **All students mode:** Present vs Absent cohort pie chart when student search is empty.
+  - **Single student mode:** Present vs Absent pie + attendance trend line chart (Present / Absent / Late over date) when student is uniquely identified via name + university roll or class roll.
+  - Results registry table with search and pagination; CSV export (frontend-only).
+  - Readonly workflow — no attendance mutation, no DB writes from this route.
 - **Role Access**: `teacher` (READONLY analytics)
 
 ---
@@ -1274,3 +1279,685 @@ This section provides an immediate high-level summary of implemented features ve
 - **Architecture:** Node.js/Express (Backend) + React/Vite (Frontend) + MongoDB. Connected via REST API and JWT Auth.
 - **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding, adhere to the "Neo-Shinjuku Night" aesthetic.
 - **Final objective:** Produce an enterprise-grade, visually stunning, and rock-solid platform for managing institution attendance data with zero friction.
+
+---
+
+## Teacher Module V2 — Mark Attendance Redesign
+
+> This section was added after the Mark Attendance redesign and context-recovery workflow. It documents all new architecture, pending integrations, and AI continuation guidelines for the Teacher attendance module.
+
+---
+
+### Teacher Module V2 Status
+
+#### Current Teacher Navigation
+
+```text
+Teacher
+├── Dashboard      (Readonly terminal)
+├── Mark Attendance (Write workflow)
+└── Analysis       (Readonly analytics console)
+```
+
+#### Module Status Overview
+
+| Module             | Status              |
+| :----------------- | :------------------ |
+| Dashboard redesign | 🚧 In Progress      |
+| Mark Attendance    | 🚧 Partially Implemented |
+| Analysis           | 🚧 In Progress      |
+| Database integration | ❌ Deferred        |
+| Attendance persistence | ❌ Deferred     |
+| Realtime sync      | 📌 Pending          |
+
+---
+
+### Teacher Mark Attendance Specification
+
+- **Route:** `/teacher/attendance`
+- **File:** `frontend/src/pages/TeacherAttendance.tsx`
+- **Purpose:** Premium teacher attendance marking workflow.
+- **Theme:** Neo-Shinjuku Night — Tokyo futuristic ERP, Glassmorphism, Neon cyan accents, Premium workflow UI.
+
+---
+
+### Attendance Filter Layer
+
+**Filter Fields:**
+
+| Field      | Type     | Rules                                  |
+| :--------- | :------- | :------------------------------------- |
+| Department | Select   | Populated from `/teacher/attendance/departments` |
+| Section    | Select   | Populated from `/teacher/attendance/sections`    |
+| Semester   | Select   | Populated from `/teacher/attendance/semesters`   |
+| Subject    | Select   | Populated from `/teacher/attendance/subjects`    |
+| Date       | Readonly | Auto-set to current date. Format: `DD MMM YYYY`, IST locked. |
+
+**Action:** `Synchronize Roster` button — triggers `POST /teacher/attendance/students`.
+
+**Responsive Layout:**
+
+```text
+Desktop  → 5 filters in a single row, button right-aligned
+Tablet   → 3 + 2 column grid
+Mobile   → stacked
+```
+
+---
+
+### Attendance Table Specification
+
+**Columns:**
+
+| Column           | Source Field    |
+| :--------------- | :-------------- |
+| University Roll  | `universityRoll` |
+| Class Roll No    | `classRoll`      |
+| Student Name     | `studentName`    |
+| Status           | `attendanceData[studentId]` |
+
+**Allowed Status Values:** `present` | `absent` | `late`
+
+**Status UI (Glow Chips):**
+
+| Status  | Color        | Glow Shadow                        |
+| :------ | :----------- | :--------------------------------- |
+| Present | Emerald 400  | `shadow-[0_0_15px_rgba(16,185,129,0.3)]` |
+| Absent  | Rose 400     | `shadow-[0_0_15px_rgba(244,63,94,0.3)]`  |
+| Late    | Amber 400    | `shadow-[0_0_15px_rgba(245,158,11,0.3)]` |
+
+**Responsive Layout:**
+
+```text
+Desktop → glass table with sticky header and hover animations
+Mobile  → grid of cards (grid-cols-1 md:grid-cols-2)
+```
+
+**Empty State:** Shown before fetch. Text: `Registry Standby — Define parameters and synchronize.`
+
+**Skeleton State:** Shown while loading roster (5-row pulsing skeleton).
+
+**No Data State:** Shown when API returns empty array. Includes a "Reset Filtration Parameters" action.
+
+---
+
+### Bulk Attendance Controls
+
+**Actions:**
+
+- `Mark All Present`
+- `Mark All Absent`
+- `Mark All Late`
+
+**Rules:**
+
+- Frontend state only.
+- No backend API call.
+- No DB mutation.
+- Placed above the roster table, right-aligned on desktop, stacked on mobile.
+
+---
+
+### Attendance Screen V2 — UI Expansion
+
+**Purpose:** Document the new TeacherAttendance UI workflow, batch controls, review modal, summary analytics, and frontend-only attendance staging.
+
+**Current implementation target:**
+
+| Property | Value |
+| :--- | :--- |
+| **Route** | `/teacher/attendance` |
+| **Page owner** | `frontend/src/pages/TeacherAttendance.tsx` |
+
+#### Screen Structure
+
+```text
+TeacherAttendancePage
+    ├── Header
+    ├── Filter Panel
+    ├── Bulk Controls
+    ├── Student Registry Table
+    ├── Submission Footer
+    └── Attendance Review Modal
+```
+
+#### Header Layer
+
+- **Title:** `MARK ATTENDANCE`
+- **Subtitle:** Select academic filters and mark attendance registry
+- **Theme:** Neo-Shinjuku Night
+- **UI:** Glassmorphism, neon cyan glow, deep navy background, smooth hover effects
+
+#### Filter Panel
+
+**Fields:** Department, Section, Semester, Subject, Date
+
+**Date rules:**
+
+- Auto-populate current IST date.
+- Readonly by default (editable in a future iteration).
+- Future DB integration deferred.
+
+**Action button:** `FETCH STUDENTS`
+
+**Current behavior:**
+
+- Frontend only
+- Local state
+- No DB write
+- No backend mutation
+
+**Future endpoint:** `POST /teacher/attendance/students`
+
+#### Student Registry Table V2
+
+| Column | Source Field |
+| :--- | :--- |
+| University Roll | `universityRoll` |
+| Class Roll No | `classRoll` |
+| Student Name | `studentName` |
+| Status | `attendanceData[studentId]` |
+
+**Status values:** `present` | `absent` | `late`
+
+**Visual rules:**
+
+| Status | Style |
+| :--- | :--- |
+| Present | Emerald glow |
+| Absent | Rose glow |
+| Late | Amber glow |
+
+**Layout:**
+
+```text
+Desktop → Sticky header, glass table, hover effects
+Mobile  → Card layout (grid-cols-1 md:grid-cols-2)
+```
+
+#### Batch Attendance Controls
+
+**Placement:** Above student table
+
+**Actions:**
+
+- `MARK ALL PRESENT`
+- `MARK ALL ABSENT`
+- `MARK ALL LATE`
+
+**Rules:**
+
+- Frontend state only
+- No API call
+- No persistence
+- Updates all rows simultaneously
+
+**Future placeholder:** `bulkUpdate()` inside `teacherAttendanceWorkflow.service.ts`
+
+#### Attendance Review Modal V2
+
+**Trigger:** Submit Attendance button
+
+**Current behavior:**
+
+- **OPEN REVIEW ONLY**
+- **NO DATABASE UPDATE**
+- **NO API SUBMIT**
+
+**Header:** Attendance Review
+
+**Sections:**
+
+| Section | Card tone | Display format |
+| :--- | :--- | :--- |
+| Present Students | Emerald card | ✓ Student Name |
+| Absent Students | Rose card | ✕ Student Name |
+| Late Students | Amber card | • Student Name |
+
+#### Attendance Summary Cards
+
+| Card | Source |
+| :--- | :--- |
+| Present Count | `attendanceData` + `students` |
+| Absent Count | Frontend computed only |
+| Late Count | Frontend computed only |
+| Total Students | Frontend computed only |
+
+#### Attendance Analytics Block
+
+- **Chart:** Pie Chart (`recharts`)
+- **Segments:** Present → Green, Absent → Red, Late → Amber
+- **Theme:** Dark glass card, animated render, custom tooltip
+- **Computation:** Frontend only — no aggregation, no backend calculation
+
+#### Submission Footer
+
+- **Button:** `SUBMIT ATTENDANCE`
+- **Current behavior:** Opens Attendance Review Modal only (no persistence)
+- **Placement:** Below Student Registry Table, right-aligned on desktop
+
+#### Submission Rules (V2 Staging)
+
+**Allowed:** Select → Fetch → Mark → Review
+
+**Blocked:** Attendance persistence, attendance submit API commit
+
+**Forbidden:**
+
+- `Attendance.bulkWrite()`
+- DB mutation
+- Schema changes
+- API commit from review modal
+
+#### Component Ownership (V2)
+
+| Layer | Path |
+| :--- | :--- |
+| Page owner | `frontend/src/pages/TeacherAttendance.tsx` |
+| Filter Panel | `frontend/src/components/attendance/AttendanceFilters.tsx` |
+| Student Registry | `frontend/src/components/attendance/AttendanceTable.tsx` |
+| Bulk Controls | `frontend/src/components/attendance/AttendanceBulkBar.tsx` |
+| Review Modal | `frontend/src/components/attendance/AttendanceReviewModal.tsx` |
+| Analytics | `frontend/src/components/attendance/AttendanceSummaryChart.tsx` |
+
+**Rules:**
+
+- Pages own state
+- Components remain presentational
+- No API calls in components
+
+#### Future TODO Markers (V2)
+
+```text
+// TODO: connect attendance API
+// TODO: connect timetable collection
+// TODO: connect attendance persistence
+// TODO: connect realtime sync
+```
+
+---
+
+### Attendance Submission Workflow
+
+```text
+Teacher Filter Selection
+         ↓
+   Fetch Students
+  (POST /teacher/attendance/students)
+         ↓
+   Student Table Populated
+         ↓
+   Bulk Update (Optional)
+         ↓
+   Manual Status Toggle Per Row
+         ↓
+   Submit Attendance Button
+   (Validates: every student must have a status)
+         ↓
+   Summary Modal Opens
+   (Roster Verification Terminal)
+         ↓
+   Pie Chart + Grouped Lists Displayed
+         ↓
+   Confirm Link Commit
+  (POST /teacher/attendance/submit)
+         ↓
+   Success → Reset to Standby State
+```
+
+**Current State:** No DB persistence. Architecture and flow only.
+
+**Future:** DB integration via `submitAttendanceService` → `Attendance.bulkWrite`.
+
+---
+
+### Attendance Summary Modal
+
+**Trigger:** Clicking "Commit Attendance Registry" with all statuses resolved.
+
+**Modal Header:** `Roster Verification Terminal`
+
+**Modal Sections:**
+
+| Section          | Color   | Fields Shown              |
+| :--------------- | :------ | :------------------------ |
+| Present Cohort   | Emerald | University Roll, Student Name |
+| Late Entries     | Amber   | University Roll, Student Name |
+| Absent Cohort    | Rose    | University Roll, Student Name |
+
+**Analytics Block (inside modal):**
+
+- **Chart Type:** Donut Pie chart using `recharts`.
+- **Segments:** Present (Green `#10b981`), Late (Amber `#f59e0b`), Absent (Red `#f43f5e`).
+- **Legend:** Name, count, and percentage for each segment.
+- **Computation:** Frontend only — derived from `attendanceData` + `students` state.
+- **Tooltip:** Custom dark glassmorphic tooltip.
+
+**Footer Actions:**
+
+- `Abort & Re-inspect` → closes modal.
+- `Confirm Link Commit` → calls `handleFinalSubmit()` → POST to backend.
+
+---
+
+### Teacher Attendance APIs
+
+#### Dropdown Population Endpoints
+
+| Method | Endpoint                              | Status         |
+| :----- | :------------------------------------ | :------------- |
+| `GET`  | `/teacher/attendance/departments`     | Placeholder    |
+| `GET`  | `/teacher/attendance/sections`        | Placeholder    |
+| `GET`  | `/teacher/attendance/semesters`       | Placeholder    |
+| `GET`  | `/teacher/attendance/subjects`        | Placeholder    |
+
+#### Roster Acquisition Endpoint
+
+```text
+POST /teacher/attendance/students
+```
+
+**Request Body:**
+```json
+{
+  "department": "",
+  "section": "",
+  "semester": "",
+  "subject": "",
+  "date": ""
+}
+```
+
+**Response:**
+```json
+[
+  {
+    "studentId": "",
+    "universityRoll": "",
+    "classRoll": "",
+    "studentName": "",
+    "status": "present"
+  }
+]
+```
+
+#### Attendance Submission Endpoint
+
+```text
+POST /teacher/attendance/submit
+```
+
+**Request Body:**
+```json
+{
+  "filters": { "department": "", "section": "", "semester": "", "subject": "", "date": "" },
+  "attendance": { "studentId": "present | absent | late" }
+}
+```
+
+**Response:**
+```json
+{ "success": true, "message": "...", "batchId": "BATCH-XXXXXX" }
+```
+
+**Current:** Placeholder service only. No DB writes.
+
+---
+
+### Attendance Services Architecture
+
+| File                                   | Functions                                                              | Status       |
+| :------------------------------------- | :--------------------------------------------------------------------- | :----------- |
+| `attendance.service.ts`                | `getAttendanceStudentListService()`, `submitAttendanceService()`       | Placeholder  |
+| `teacherAttendance.service.ts`         | `processTeacherAttendanceService()`                                    | Placeholder  |
+| `teacherAttendanceWorkflow.service.ts` | `fetchStudents()`, `bulkUpdate()`, `buildSummary()`, `generateAnalytics()`, `submitAttendance()` | Architecture |
+| `teacherAttendanceSync.service.ts`     | `updateClassStatus()`, `updateDashboardStatus()`                       | Architecture |
+
+**Current State:** Architecture and placeholder stubs only.
+
+**Future:** Real DB persistence via `Attendance.bulkWrite()` + reactive dashboard sync.
+
+---
+
+### Dashboard Sync Architecture (Future Integration)
+
+When attendance persistence is wired in future:
+
+```text
+Attendance Submit
+       ↓
+submitAttendanceService() → Attendance.bulkWrite()
+       ↓
+updateClassStatus() triggers
+       ↓
+updateDashboardStatus() called
+       ↓
+Timetable row status: pending → complete
+       ↓
+Dashboard re-renders → row floats to bottom
+```
+
+**WebSocket TODOs** (deferred):
+- `io.to(teacherId).emit('registry_cycle_update', { timetableId, status })`
+
+---
+
+### Pending Integrations — Mark Attendance
+
+The following `// TODO` markers exist in the codebase and represent deferred DB connections:
+
+| TODO Marker                            | File                                    |
+| :------------------------------------- | :-------------------------------------- |
+| `// TODO connect department collection` | `teacher.service.ts`, `attendance.service.ts` |
+| `// TODO connect section collection`   | `teacher.service.ts`                    |
+| `// TODO connect subject collection`   | `teacher.service.ts`                    |
+| `// TODO connect student collection`   | `attendance.service.ts`                 |
+| `// TODO connect attendance collection`| `attendance.service.ts`, `teacherAttendance.service.ts` |
+| `// TODO persist attendance`           | `attendance.service.ts`                 |
+| `// TODO Trigger WebSocket broadcast`  | `teacherAttendanceSync.service.ts`      |
+
+**No schema modifications have been made.**
+
+---
+
+### Recovery Workflow (Context Loss Protocol)
+
+If IDE crash, context loss, or session interruption occurs:
+
+**Step 1: Audit the implementation**
+
+Check each feature against `DONE` / `PARTIAL` / `MISSING`:
+
+| Target                  | Inspect File                       |
+| :---------------------- | :--------------------------------- |
+| Filters                 | `TeacherAttendance.tsx` lines ~160–280 |
+| Fetch Flow              | `handleFetchStudents()` function   |
+| Student Table           | Desktop `<table>` + Mobile `<div>` sections |
+| Bulk Controls           | `handleBulkUpdate()` + toolbar above table |
+| Submit Button           | Submission footer section          |
+| Summary Modal           | `showSummaryModal` state + modal JSX |
+| Pie Chart               | `recharts` PieChart inside modal   |
+| Workflow Services       | `backend/src/services/`            |
+| Sync Placeholders       | `teacherAttendanceSync.service.ts` |
+
+**Step 2: Recover only missing tasks. DO NOT overwrite completed work.**
+
+---
+
+### AI Guardrails — Teacher Attendance Module (Extended)
+
+#### AI MUST:
+
+- Inspect `TeacherAttendance.tsx` before rebuilding any filter, table, or modal component.
+- Use `studentId` as the key for `attendanceData` Record (not `_id`).
+- Use `POST /teacher/attendance/students` (not `GET`) for roster acquisition.
+- Keep the date field strictly readonly and IST-locked.
+- Preserve Neo-Shinjuku Night theme: glassmorphism, neon cyan accents, dark navy base.
+- Keep backend services as architecture-only stubs until explicitly directed to persist.
+- Use `recharts` (already installed) for all visualizations — do not add new chart libraries.
+- Use `lucide-react` (already installed) for all icons.
+- Maintain modular service separation: one concern per service file.
+
+#### AI MUST NOT:
+
+- Overwrite finished filter section, table, bulk controls, modal, or chart code.
+- Call `Attendance.bulkWrite()` or any DB write inside attendance services (deferred).
+- Modify any Mongoose schema files.
+- Remove `// TODO` markers — they represent future integration triggers.
+- Use `student._id` as the attendance key; the correct key is `student.studentId`.
+- Add mock/hardcoded values to replace placeholder services.
+- Break the submission flow sequence: `Select → Fetch → Mark → Submit → Modal → Confirm`.
+
+---
+
+## Teacher Analysis Console V2
+
+**Purpose:** Readonly attendance extraction and analytics terminal for teachers.
+
+| Property | Value |
+| :--- | :--- |
+| **Route** | `/teacher/analysis` |
+| **Page owner** | `frontend/src/pages/TeacherAnalytics.tsx` |
+| **Status** | 🚧 In Progress |
+| **Type** | READ ONLY — no DB write, no attendance mutation |
+
+**Theme:** Neo-Shinjuku Night — dark futuristic ERP, glassmorphism, neon cyan accents, premium analytics console.
+
+---
+
+### Analytics Filter Layer
+
+**Filters:** Department, Semester, Section, Subject, Student Search Input, Status Filter
+
+**Student search rules:**
+
+| Condition | Behavior |
+| :--- | :--- |
+| **Input empty** | Default: **ALL STUDENTS** scoped to selected Department, Semester, Section, Subject |
+| **Name provided** | Require unique identifier — show University Roll Number **OR** Class Roll Number panel |
+| **Identity unresolved** | Student record **MUST NOT** load until roll number is provided (or name resolves to a single match) |
+
+**Status filter:**
+
+| Property | Value |
+| :--- | :--- |
+| **Values** | Present, Absent, Late |
+| **Type** | Multi-select |
+| **Purpose** | Attendance extraction filtering |
+
+**Action:** `GENERATE ANALYSIS`
+
+**Behavior:** Read-only fetch (current: frontend mock registry + simulated delay). No mutation.
+
+---
+
+### Result Table
+
+| Column | Field |
+| :--- | :--- |
+| University Roll No | `universityRoll` |
+| Class Roll No | `classRoll` |
+| Student Name | `studentName` |
+| Status | `status` |
+
+**Format:**
+
+```text
+| University Roll | Class Roll | Name | Status |
+```
+
+**Status colors:** Present → Emerald glow | Absent → Rose glow | Late → Amber glow
+
+**UI:** Glass table, sticky header, hover animations, responsive mobile cards, table search, pagination
+
+---
+
+### Analytics Modes
+
+#### MODE 1 — ALL STUDENTS
+
+| Property | Value |
+| :--- | :--- |
+| **Condition** | Student search input empty |
+| **Dataset** | Department + Semester + Section + Subject cohort |
+| **Chart** | Total Present vs Total Absent |
+| **Chart type** | Pie chart (`recharts`) |
+| **Theme** | Present → Green, Absent → Red, glass background, animated render |
+
+#### MODE 2 — SINGLE STUDENT
+
+| Property | Value |
+| :--- | :--- |
+| **Condition** | Student uniquely identified |
+| **Required** | Student Name **AND** (University Roll **OR** Class Roll) |
+| **Chart 1** | Present vs Absent — pie chart |
+| **Chart 2** | Attendance Trend — Present / Absent / Late over time |
+| **Chart 2 type** | Line chart (`recharts`) |
+| **X-Axis** | Date |
+| **Y-Axis** | Attendance count |
+| **Purpose** | Attendance history visualization |
+
+**Ambiguity state:** Multiple name matches without roll → prompt for University Roll or Class Roll.
+
+---
+
+### Export Layer
+
+| Property | Value |
+| :--- | :--- |
+| **Button** | `DOWNLOAD REPORT` |
+| **Current format** | CSV (frontend-generated blob) |
+| **Future format** | PDF via `pdf.service.ts` |
+| **Export includes** | Filters used, student list, attendance records, summary statistics, chart snapshot placeholder |
+| **Current** | Frontend export only — no backend report generation |
+
+---
+
+### Component Ownership (Analysis V2)
+
+| Layer | Path |
+| :--- | :--- |
+| Page | `frontend/src/pages/TeacherAnalytics.tsx` |
+| Filters | `frontend/src/components/analytics/AnalyticsFilters.tsx` |
+| Results table | `frontend/src/components/analytics/AnalyticsTable.tsx` |
+| Overview chart | `frontend/src/components/analytics/AttendanceOverviewChart.tsx` |
+| Trend chart | `frontend/src/components/analytics/StudentTrendChart.tsx` |
+| Export | `frontend/src/components/analytics/ExportPanel.tsx` |
+
+**Rules:**
+
+- Page owns state and mock/read fetch orchestration
+- Components remain presentational
+- No API calls inside components
+
+---
+
+### Future TODO (Analysis V2)
+
+```text
+// TODO: connect analytics aggregation
+// TODO: connect trend aggregation
+// TODO: connect student attendance history
+// TODO: connect export service
+// TODO: connect PDF service
+// TODO: connect analytics APIs
+```
+
+---
+
+### AI Guardrails — Teacher Analysis Module (Extended)
+
+#### AI MUST:
+
+- Keep `/teacher/analysis` strictly **readonly** — extraction and visualization only.
+- Use `recharts` for all charts; do not add other chart libraries.
+- Preserve Neo-Shinjuku theme: glass panels, neon cyan accents, deep navy base.
+- Enforce student identity resolution before single-student mode loads.
+- Keep page/component separation: state in `TeacherAnalytics.tsx`, UI in `components/analytics/`.
+
+#### AI MUST NOT:
+
+- Write attendance records or call mutating endpoints from the Analysis tab.
+- Modify Mongoose schemas or add write APIs for analytics export.
+- Remove existing Mark Attendance or Dashboard documentation in `AGENT.md`.
+- Overwrite completed `TeacherAnalytics.tsx` filter/table/chart/export flows without auditing first.

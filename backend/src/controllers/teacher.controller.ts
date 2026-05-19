@@ -17,6 +17,29 @@ import {
   getAttendanceSemestersService,
   getAttendanceSubjectsService
 } from '../services/teacher.service';
+import { getAttendanceStudentListService, submitAttendanceService } from '../services/attendance.service';
+
+// POST /api/teacher/attendance/submit
+export const submitAttendance = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const payload = req.body;
+    const data = await submitAttendanceService(payload);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// POST /api/teacher/attendance/students
+export const getAttendanceStudentList = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const filters = req.body;
+    const data = await getAttendanceStudentListService(filters);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
 
 // GET /api/teacher/dashboard
 export const getTeacherDashboard = async (req: AuthRequest, res: Response): Promise<void> => {

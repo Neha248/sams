@@ -5,12 +5,12 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AppLayout from './components/AppLayout';
 import Attendance from './pages/Attendance';
-import Timetable from './pages/Timetable.tsx';
-import Notifications from './pages/Notifications.tsx';
-import TeacherAttendance from './pages/TeacherAttendance.tsx';
-import TeacherAnalytics from './pages/TeacherAnalytics.tsx';
-import AdminStudents from './pages/AdminStudents.tsx';
-import AdminNotifications from './pages/AdminNotifications.tsx';
+import Timetable from './pages/Timetable';
+import Notifications from './pages/Notifications';
+import TeacherAttendance from './pages/TeacherAttendance';
+import TeacherAnalytics from './pages/TeacherAnalytics';
+import AdminStudents from './pages/AdminStudents';
+import AdminNotifications from './pages/AdminNotifications';
 
 const RoleRoute = ({
   allowed,
