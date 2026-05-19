@@ -19,7 +19,7 @@
   - Admin portals: student attendance overview, teacher assignment CRUD (create/remove), department faculty analytics.
   - Multi-semester cohorts (seed + filters on semesters 1, 3, 5, 7).
   - PDF export for reports using `pdfkit`.
-  - Admin Timetable portal (`/admin/timetable`): filterable schedule table with slot UID, teacher, subject, department, section, semester, timing; add/edit/delete slots and cohort publish.
+  - Admin Timetable portal (`/admin/timetable`): filterable schedule table with slot UID, teacher, subject, department, section, semester, timing; add slots and cohort publish (read-only table — no Status or Actions columns).
 - **Long-term vision**: To become a highly scalable, multi-tenant capable educational ERP that can be easily deployed by various institutions seeking a premium software experience.
 
 ## Project Status
@@ -37,7 +37,7 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Admin Teachers portal** (`/admin/teachers`): Separate route from students; assignment table; create via `AssignTeacherModal`; soft-remove via `DELETE /api/admin/teacher/:profileId` — `adminTeacher.service.ts`.
 - ✅ **Admin Department dashboard** (`/`): Faculty attendance table + assign teacher (Stitch Academic Intelligence theme).
 - ✅ **Multi-semester seed data**: Students, teachers, subjects, timetables, and attendance distributed across semesters **1, 3, 5, 7** (`backend/scripts/seed.ts`).
-- ✅ **Admin Timetable portal** (`/admin/timetable`): Department/semester/section filters, schedule table (UID, teacher login, subject, department, section, semester, timing), add/edit/delete slots, cohort publish — `adminTimetable.service.ts`, `AdminTimetable.tsx`, `TimetableSlotModal`, `TimetableOverviewTable`.
+- ✅ **Admin Timetable portal** (`/admin/timetable`): Department/semester/section filters, read-only schedule table (7 columns: UID, teacher login, subject, department, section, semester, timing), **Add Slot** + **Publish Cohort** toolbar actions — `adminTimetable.service.ts`, `AdminTimetable.tsx`, `TimetableSlotModal`, `TimetableOverviewTable`. Backend `PUT`/`DELETE` timetable routes exist but are not wired in the table UI.
 - ✅ **Local dev tooling (Windows)**: `docker-compose.mongo.yml` (MongoDB-only), `scripts/start-mongo.ps1`, `scripts/free-port.ps1` (Node-only, port **5001**); local backend **5001** + Docker backend **5000** can coexist; Vite proxies via `frontend/.env.development`.
 
 #### In Progress:

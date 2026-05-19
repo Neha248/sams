@@ -26,7 +26,6 @@ const AdminTimetable = () => {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editRow, setEditRow] = useState<TimetableTableRow | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
@@ -73,20 +72,6 @@ const AdminTimetable = () => {
 
   const selectedDept = departments.find((d) => d.id === departmentId);
   const canManage = Boolean(departmentId);
-
-  const handleDelete = async (row: TimetableTableRow) => {
-    if (!window.confirm(`Remove slot ${row.uid} (${row.subjectName})?`)) return;
-    setDeletingId(row.id);
-    setError('');
-    try {
-      await api.delete(`/admin/timetable/${row.id}`);
-      await loadSlots();
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   const handlePublish = async () => {
     if (!departmentId || !semester || !section) {
@@ -196,16 +181,6 @@ const AdminTimetable = () => {
               : undefined
           }
           addDisabled={!canManage}
-          onEdit={
-            canManage
-              ? (row) => {
-                  setEditRow(row);
-                  setModalOpen(true);
-                }
-              : undefined
-          }
-          onDelete={canManage ? handleDelete : undefined}
-          deletingId={deletingId}
         />
       )}
 

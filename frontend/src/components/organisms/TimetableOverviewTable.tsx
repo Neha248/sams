@@ -25,18 +25,12 @@ type TimetableOverviewTableProps = {
   rows: TimetableTableRow[];
   onAddSlot?: () => void;
   addDisabled?: boolean;
-  onEdit?: (row: TimetableTableRow) => void;
-  onDelete?: (row: TimetableTableRow) => void;
-  deletingId?: string | null;
 };
 
 export function TimetableOverviewTable({
   rows,
   onAddSlot,
   addDisabled,
-  onEdit,
-  onDelete,
-  deletingId,
 }: TimetableOverviewTableProps) {
   return (
     <div className="glass-card rounded-xl overflow-hidden">
@@ -64,7 +58,7 @@ export function TimetableOverviewTable({
         <table className="w-full text-left border-collapse min-w-[960px]">
           <thead>
             <tr className="bg-surface-container-low/50 border-b border-outline-variant/20">
-              {['UID', 'Teacher', 'Subject', 'Department', 'Section', 'Semester', 'Timing', 'Status', 'Actions'].map(
+              {['UID', 'Teacher', 'Subject', 'Department', 'Section', 'Semester', 'Timing'].map(
                 (h) => (
                   <th
                     key={h}
@@ -79,7 +73,7 @@ export function TimetableOverviewTable({
           <tbody className="divide-y divide-outline-variant/10">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-on-surface-variant text-body-md">
+                <td colSpan={7} className="px-6 py-12 text-center text-on-surface-variant text-body-md">
                   No timetable slots match the current filters.
                 </td>
               </tr>
@@ -101,42 +95,6 @@ export function TimetableOverviewTable({
                   <td className="px-6 py-4">
                     <p className="text-body-sm text-on-surface">{row.timing}</p>
                     <p className="text-label-md text-on-surface-variant">Room {row.roomNo}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2.5 py-1 rounded-full text-label-md font-medium ${
-                        row.isPublished
-                          ? 'bg-secondary-container text-on-secondary-container'
-                          : 'bg-surface-container-high text-on-surface-variant'
-                      }`}
-                    >
-                      {row.isPublished ? 'Published' : 'Draft'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {onEdit ? (
-                        <button
-                          type="button"
-                          onClick={() => onEdit(row)}
-                          className="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
-                          title="Edit slot"
-                        >
-                          <MaterialIcon name="edit" size="sm" />
-                        </button>
-                      ) : null}
-                      {onDelete ? (
-                        <button
-                          type="button"
-                          onClick={() => onDelete(row)}
-                          disabled={deletingId === row.id}
-                          className="p-2 rounded-lg text-error hover:bg-error-container/30 transition-colors disabled:opacity-50"
-                          title="Remove slot"
-                        >
-                          <MaterialIcon name="delete" size="sm" />
-                        </button>
-                      ) : null}
-                    </div>
                   </td>
                 </tr>
               ))
