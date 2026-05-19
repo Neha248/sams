@@ -85,7 +85,7 @@ const seed = async () => {
 
   await User.create({
     userId: 'ADMIN001',
-    fullName: 'Minsu Agrahari',
+    fullName: 'Marcus Hale',
     email: 'admin@sams.edu',
     password: 'Admin@123',
     role: 'admin',
@@ -94,7 +94,7 @@ const seed = async () => {
   console.log('Admin created: ADMIN001');
 
   const teacherDefs = [
-    { userId: 'TCH001', fullName: 'Minsu Agrahari', email: 'minsu@sams.edu', employeeId: 'EMP001', dept: csId, codes: ['CS101', 'CS102'] },
+    { userId: 'TCH001', fullName: 'Amit Patel', email: 'amit@sams.edu', employeeId: 'EMP001', dept: csId, codes: ['CS101', 'CS102'] },
     { userId: 'TCH002', fullName: 'Dr. Priya Nambiar', email: 'priya.t@sams.edu', employeeId: 'EMP002', dept: csId, codes: ['CS103', 'CS201'] },
     { userId: 'TCH003', fullName: 'Dr. Raj Kumar', email: 'raj@sams.edu', employeeId: 'EMP003', dept: csId, codes: ['CS202', 'CS203'] },
     { userId: 'TCH004', fullName: 'Prof. Anita Sharma', email: 'anita@sams.edu', employeeId: 'EMP004', dept: csId, codes: ['CS501', 'CS502'] },

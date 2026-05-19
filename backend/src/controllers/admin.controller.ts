@@ -15,6 +15,8 @@ import {
   updateTimetableSchema,
 } from '../validators/timetable.validator';
 import { getTimetableOverview } from '../services/adminTimetable.service';
+import { sendNotificationSchema } from '../validators/notification.validator';
+import { createStudentSchema } from '../validators/admin.validator';
 import { sendSuccess, sendError } from '../utils/response';
 import { getFacultySubjectAttendanceByDepartment } from '../services/adminAttendance.service';
 import {
@@ -57,10 +59,38 @@ export const getAdminDashboard = async (_req: Request, res: Response): Promise<v
 // POST /api/admin/student/create
 export const createStudent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { fullName, userId, email, password, rollNumber, departmentId, semester, section, phone } = req.body;
+    const parsed = createStudentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, parsed.error.errors[0]?.message ?? 'Validation failed', 422);
+      return;
+    }
+    const { fullName, userId, email, password, rollNumber, departmentId, semester, section, phone } =
+      parsed.data;
+
+    const existing = await User.findOne({ $or: [{ userId }, { email }] });
+    if (existing) {
+      sendError(res, 'User ID or email already exists', 409);
+      return;
+    }
+
     const user = await User.create({ fullName, userId, email, password, role: 'student' });
-    const profile = await StudentProfile.create({ userId: user._id, rollNumber, departmentId, semester, section, phone });
-    sendSuccess(res, { user: { id: user._id, userId: user.userId, fullName: user.fullName, role: user.role }, profile }, 'Student created', 201);
+    const profile = await StudentProfile.create({
+      userId: user._id,
+      rollNumber,
+      departmentId,
+      semester,
+      section,
+      phone,
+    });
+    sendSuccess(
+      res,
+      {
+        user: { id: user._id, userId: user.userId, fullName: user.fullName, role: user.role },
+        profile,
+      },
+      'Student created',
+      201
+    );
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -229,12 +259,37 @@ export const publishTimetable = async (req: Request, res: Response): Promise<voi
 // POST /api/admin/notifications/send
 export const sendNotification = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, message, priority, targetType, targetId, scheduledAt } = req.body;
+    const parsed = sendNotificationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, parsed.error.errors[0]?.message ?? 'Invalid notification payload', 400);
+      return;
+    }
+
+    const { title, message, priority, targetType, targetId } = parsed.data;
+
+    if (targetType !== 'all') {
+      const user = await User.findById(targetId);
+      if (!user || !user.isActive) {
+        sendError(res, 'Recipient not found', 404);
+        return;
+      }
+      if (targetType === 'student' && user.role !== 'student') {
+        sendError(res, 'Selected user is not a student', 400);
+        return;
+      }
+      if (targetType === 'teacher' && user.role !== 'teacher') {
+        sendError(res, 'Selected user is not a teacher', 400);
+        return;
+      }
+    }
+
     const notification = await Notification.create({
-      title, message, priority, targetType,
-      targetId: targetId ? new mongoose.Types.ObjectId(targetId) : undefined,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
-      sentAt: scheduledAt ? undefined : new Date(),
+      title,
+      message,
+      priority,
+      targetType,
+      targetId: targetType === 'all' ? undefined : new mongoose.Types.ObjectId(targetId),
+      sentAt: new Date(),
       createdBy: req.user!.id,
       isDraft: false,
     });

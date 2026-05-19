@@ -6,6 +6,7 @@ import { DepartmentFilterSelect } from '../components/molecules/DepartmentFilter
 import type { DepartmentOption } from '../components/molecules/DepartmentSelect';
 import { SearchField } from '../components/molecules/SearchField';
 import { SemesterFilterSelect } from '../components/molecules/SemesterFilterSelect';
+import { AddStudentModal } from '../components/organisms/AddStudentModal';
 import { StudentAttendanceChart } from '../components/organisms/StudentAttendanceChart';
 import {
   StudentOverviewTable,
@@ -23,6 +24,7 @@ type SubjectRow = {
 
 type StudentOverview = {
   profileId: string;
+  studentUserId: string;
   uniNo: string;
   name: string;
   semester: number;
@@ -57,6 +59,7 @@ function buildTableRows(students: StudentOverview[]): StudentTableRow[] {
       const isFirstSubject = subjectIdx === 0;
       rows.push({
         rowKey: `${student.profileId}-${sub.subjectId}-present`,
+        studentUserId: isFirstSubject ? student.studentUserId : undefined,
         uniNo: student.uniNo,
         name: student.name,
         semester: student.semester,
@@ -99,6 +102,8 @@ const AdminStudents = () => {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [removingStudentUserId, setRemovingStudentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -144,6 +149,41 @@ const AdminStudents = () => {
   }, [loadOverview]);
 
   const tableRows = useMemo(() => buildTableRows(students), [students]);
+
+  const selectedDepartment = departments.find((d) => d.id === departmentId);
+  const addDepartmentId = departmentId || departments[0]?.id || '';
+  const addDepartmentName =
+    selectedDepartment?.name ?? departments[0]?.name ?? 'Select a department';
+
+  const handleAddStudent = () => {
+    if (!addDepartmentId) {
+      setError('No departments available. Create a department first.');
+      return;
+    }
+    if (!departmentId) {
+      setError('Select a specific department to add a student (not All Departments).');
+      return;
+    }
+    setError('');
+    setAddOpen(true);
+  };
+
+  const handleRemoveStudent = async (studentUserId: string, studentName: string) => {
+    const confirmed = window.confirm(
+      `Remove ${studentName} from the system? They will no longer be able to sign in.`
+    );
+    if (!confirmed) return;
+    setRemovingStudentUserId(studentUserId);
+    setError('');
+    try {
+      await api.delete(`/admin/student/${studentUserId}`);
+      await loadOverview();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setRemovingStudentUserId(null);
+    }
+  };
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -211,10 +251,24 @@ const AdminStudents = () => {
             rows={tableRows}
             onDownload={handleDownload}
             downloading={downloading}
+            onAddStudent={handleAddStudent}
+            addDisabled={departments.length === 0}
+            onRemoveStudent={handleRemoveStudent}
+            removingStudentUserId={removingStudentUserId}
           />
           <StudentAttendanceChart present={chart.present} absent={chart.absent} />
         </>
       )}
+
+      <AddStudentModal
+        open={addOpen}
+        departmentId={addDepartmentId}
+        departmentName={addDepartmentName}
+        semesterFilter={semester}
+        sectionFilter=""
+        onClose={() => setAddOpen(false)}
+        onSuccess={() => void loadOverview()}
+      />
     </div>
   );
 };

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 import { MaterialIcon } from '../atoms/MaterialIcon';
 import { NavItem } from '../molecules/NavItem';
@@ -7,12 +9,39 @@ const ADMIN_NAV = [
   { to: '/admin/students', icon: 'group', label: 'Students' },
   { to: '/admin/teachers', icon: 'school', label: 'Teachers' },
   { to: '/admin/timetable', icon: 'calendar_month', label: 'Timetable' },
-  { to: '/admin/notifications', icon: 'assessment', label: 'Reports' },
-  { to: '/admin/notifications', icon: 'settings', label: 'Settings' },
+  { to: '/admin/notifications', icon: 'notifications', label: 'Notifications' },
 ];
 
 export function AdminSidebar() {
-  const { user } = useAuthStore();
+  const { user, token, login } = useAuthStore();
+
+  useEffect(() => {
+    if (!token) return;
+    api
+      .get('/auth/me')
+      .then((res) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const u = (res as any).data as {
+          _id: string;
+          userId: string;
+          fullName: string;
+          email: string;
+          role: 'student' | 'teacher' | 'admin';
+        };
+        if (!u?._id) return;
+        login(
+          {
+            id: u._id,
+            userId: u.userId,
+            fullName: u.fullName,
+            email: u.email,
+            role: u.role,
+          },
+          token
+        );
+      })
+      .catch(() => {});
+  }, [token, login]);
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-sidebar-width bg-tertiary flex flex-col py-container-margin border-r border-outline-variant/20 shadow-lg z-50">

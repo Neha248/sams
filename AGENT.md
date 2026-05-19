@@ -16,7 +16,7 @@
   - Dynamic "Safe Line" (75% rule) calculations.
   - Attendance tracking with compound index constraints.
   - Full dashboards for Admins, Teachers, and Students.
-  - Admin portals: student attendance overview, teacher assignment CRUD (create/remove), department faculty analytics.
+  - Admin portals: student attendance overview with add/remove students, teacher assignment CRUD (create/remove), department faculty analytics.
   - Multi-semester cohorts (seed + filters on semesters 1, 3, 5, 7).
   - PDF export for reports using `pdfkit`.
   - Admin Timetable portal (`/admin/timetable`): filterable schedule table with slot UID, teacher, subject, department, section, semester, timing; add slots and cohort publish (read-only table — no Status or Actions columns).
@@ -33,7 +33,7 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Authentication**: Full JWT auth backend & frontend routing guards integration.
 - ✅ **Role system**: Explicit Admin/Teacher/Student workflows and route protections.
 - ✅ **Docker setup**: Fully functional Multi-Container environment with backend, frontend, MongoDB, and Mongo-Express.
-- ✅ **Admin Students portal** (`/admin/students`): Department + semester filters, subject-wise attendance table (Present/Absent rows), Recharts summary, CSV export — `adminStudent.service.ts`.
+- ✅ **Admin Students portal** (`/admin/students`): Department + semester filters, subject-wise attendance table (Present/Absent rows), Recharts summary, CSV export, **Add Student** (`AddStudentModal` → `POST /api/admin/student/create`), **Remove** (`DELETE /api/admin/student/:id`) — `adminStudent.service.ts`.
 - ✅ **Admin Teachers portal** (`/admin/teachers`): Separate route from students; assignment table; create via `AssignTeacherModal`; soft-remove via `DELETE /api/admin/teacher/:profileId` — `adminTeacher.service.ts`.
 - ✅ **Admin Department dashboard** (`/`): Faculty attendance table + assign teacher (Stitch Academic Intelligence theme).
 - ✅ **Multi-semester seed data**: Students, teachers, subjects, timetables, and attendance distributed across semesters **1, 3, 5, 7** (`backend/scripts/seed.ts`).
@@ -42,7 +42,8 @@ This section helps future AI agents understand the current implementation progre
 
 #### In Progress:
 - 🚧 **Attendance tracking**: Core schemas and seed data done. Teacher attendance UI grids and 75% visual checks are partially implemented but need complete interactive integration.
-- 🚧 **Notifications**: Base system models and API routes are live, but real UI notifications list and toast broadcasts are under development.
+- ✅ **Admin Notifications portal** (`/admin/notifications`): Stitch-themed composer with title, message, **Global** / **Student** / **Teacher** targeting; department + recipient dropdown for individuals — `AdminNotifications.tsx`, `notification.validator.ts`, `POST /api/admin/notifications/send`.
+- 🚧 **Notifications (student/teacher feeds)**: In-app list pages exist; read/unread mutations and realtime toasts are still planned.
 
 #### Planned:
 - 📌 **Analytics**: Basic aggregate queries exist, but advanced interactive analytics charts (heatmaps, compliance trends) are scheduled.
@@ -183,8 +184,8 @@ This section defines the API endpoints, request/response models, authorization r
       "user": {
         "id": "6649f3e4...",
         "userId": "STU001",
-        "fullName": "Minsu Agrahari",
-        "email": "minsu@sams.edu",
+        "fullName": "Anjali Sharma",
+        "email": "stu001@sams.edu",
         "role": "student"
       }
     }
@@ -378,8 +379,8 @@ This section defines the API endpoints, request/response models, authorization r
         "semester": 5,
         "section": "A",
         "userId": {
-          "fullName": "Minsu Agrahari",
-          "email": "minsu@sams.edu"
+          "fullName": "Anjali Sharma",
+          "email": "stu001@sams.edu"
         }
       }
     ]
@@ -466,7 +467,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Timetable`, `Subject`, `Department`, `User` (Read).
 
 #### 11. `PUT /timetable/:id` / `DELETE /timetable/:id`
-- **Purpose**: Update or remove a single timetable slot from the admin Timetable dashboard.
+- **Purpose**: Update or remove a single timetable slot (backend only — not exposed in `/admin/timetable` table UI after Status/Actions removal).
 - **Validators**: `updateTimetableSchema` (PUT) in `timetable.validator.ts`.
 - **Models Touched**: `Timetable` (Write / Delete).
 
@@ -574,14 +575,14 @@ Admin sidebar (`AdminSidebar.tsx`):
 | Students | `/admin/students` |
 | Teachers | `/admin/teachers` |
 | Timetable | `/admin/timetable` |
-| Reports / Settings | `/admin/notifications` (placeholder) |
+| Notifications | `/admin/notifications` |
 
 #### 1. Route: `/admin/students` (Student Attendance Overview)
 - **Page Owner**: `AdminStudents.tsx`
 - **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField`, `StudentOverviewTable`, `StudentAttendanceChart`
 - **Store Dependencies**: `useAuthStore` (validates admin credentials).
-- **API Dependencies**: `GET /api/admin/students/overview`, `GET /api/admin/students/export`, `GET /api/admin/departments`
-- **Expected Behavior**: Filter students by department (including **All Departments**), semester (1/3/5/7), and search. Table shows two rows per subject (Present/Absent). Chart and CSV export respect active filters. See [Admin Students Tab](#admin-students-tab--student-details-overview).
+- **API Dependencies**: `GET /api/admin/students/overview`, `GET /api/admin/students/export`, `GET /api/admin/departments`, `POST /api/admin/student/create`, `DELETE /api/admin/student/:id`
+- **Expected Behavior**: Filter students by department (including **All Departments**), semester (1/3/5/7), and search. Table shows two rows per subject (Present/Absent). **Add Student** and row **Remove** require a specific department (not All). Chart and CSV export respect active filters. See [Admin Students Tab](#admin-students-tab--student-details-overview).
 - **Role Access**: `admin`
 
 #### 2. Route: `/admin/teachers` (Teacher Assignments Overview)
@@ -597,15 +598,15 @@ Admin sidebar (`AdminSidebar.tsx`):
 - **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SectionFilterSelect`, `SearchField`, `TimetableOverviewTable`, `TimetableSlotModal`
 - **Store Dependencies**: `useAuthStore` (validates admin credentials).
 - **API Dependencies**: `GET /api/admin/timetable/overview`, `POST /api/admin/timetable/create`, `PUT /api/admin/timetable/:id`, `DELETE /api/admin/timetable/:id`, `PUT /api/admin/timetable/publish`, `GET /api/admin/departments`, `GET /api/admin/subjects`, `GET /api/admin/teachers`
-- **Expected Behavior**: Lists timetable slots with **UID** (slot code `TT-XXXXXX`), **teacher** (name + login ID), **subject**, **department**, **section**, **semester**, and **timing** (day, start–end, room). Filters: department (All or specific), semester, section, search. **Add Slot** / row **Edit** / **Delete** require a specific department. **Publish Cohort** marks all slots for the selected department + semester + section as `isPublished`. See [Admin Timetable Tab](#admin-timetable-tab--schedule-management).
+- **Expected Behavior**: Lists timetable slots with **UID** (slot code `TT-XXXXXX`), **teacher** (name + login ID), **subject**, **department**, **section**, **semester**, and **timing** (day, start–end, room). No **Status** or **Actions** columns in the table. Filters: department (All or specific), semester, section, search. **Add Slot** and **Publish Cohort** (toolbar + table header Add) require a specific department. **Publish Cohort** marks all slots for the selected department + semester + section as `isPublished`. See [Admin Timetable Tab](#admin-timetable-tab--schedule-management).
 - **Role Access**: `admin`
 
-#### 4. Route: `/admin/notifications` (Institutional Broadcast Console)
+#### 4. Route: `/admin/notifications` (Notifications Composer)
 - **Page Owner**: `AdminNotifications.tsx`
-- **Components Used**: Broadcast scope checkboxes (Global, Department, Section), rich message editor cards, priority level markers.
-- **Store Dependencies**: `useAuthStore` (reads sender profile metadata).
-- **API Dependencies**: `POST /api/admin/notifications/send`
-- **Expected Behavior**: Interface to draft and dispatch announcements. Admins define the priority scope, target student subsets, compose the headline and message body, and trigger system alerts.
+- **Components Used**: `DepartmentSelect`, `MaterialIcon`, Stitch glass form card.
+- **Store Dependencies**: `useAuthStore` (admin auth).
+- **API Dependencies**: `POST /api/admin/notifications/send`, `GET /api/admin/departments`, `GET /api/admin/students?department=`, `GET /api/admin/teachers`
+- **Expected Behavior**: Compose **title** and **message**. Choose recipient scope: **Global** (`targetType: all`), **Student**, or **Teacher**. For individual targets, pick a **department** then select the person from a dropdown (students from `/admin/students`, teachers filtered by department from `/admin/teachers`). Sidebar shows a single **Notifications** link (no separate Reports/Settings entries). See [Admin Notifications Tab](#admin-notifications-tab--broadcast-composer).
 - **Role Access**: `admin`
 
 ## Folder Structure Documentation
@@ -1022,9 +1023,10 @@ This section traces the full end-to-end execution path for key feature modules, 
 
 ### 4. Notifications Broadcast Flow (Admin Blasts Alert)
 - **Path Outline**:
-  `Admin UI` (Announcement Composer) → `AdminNotifications.tsx` (Trigger send) → `api.post('/admin/notifications/send')` → `admin.routes.ts` (Admin guard) → `admin.controller.ts` → `Notification.model.ts` (Mongoose insert) → `Student UI` (Pulls alert from database).
+  `AdminNotifications.tsx` (title, message, Global | Student | Teacher + department/recipient) → `POST /api/admin/notifications/send` → `notification.validator.ts` (Zod) → `sendNotification` → `Notification.model.ts` → students/teachers fetch via `GET /api/student/notifications` or `GET /api/teacher/notifications`.
 - **Owner Layer**:
-  - Frontend: `AdminNotifications.tsx` UI + `Notifications.tsx` (Student feed viewer).
+  - Frontend: `AdminNotifications.tsx` (composer); `Notifications.tsx` (student feed).
+  - Teacher feed: `GET /api/teacher/notifications` (`getTeacherNotifications`).
   - Backend: `admin.controller.ts` endpoint dispatcher.
 - **Validation Point**:
   - Zod validation: Ensures broadcast fields (`title`, `message`, `priority`) are non-empty, and target scopes (CSE, Semester 5, section) are valid.
@@ -1037,9 +1039,9 @@ This section traces the full end-to-end execution path for key feature modules, 
 
 ### 5. Timetable Generation Flow (Admin Publishes Schedule Slots)
 - **Path Outline**:
-  `Admin UI` (Timetable scheduler card forms) → `Timetable.tsx` (Submit configuration) → `api.post('/admin/timetable/create')` → `admin.routes.ts` (Role match validation) → `timetable.validator.ts` (Zod slot schema check) → `admin.controller.ts` → `Timetable.model.ts` (Mongoose save) → `Student/Teacher UI` (Timetable grid updates).
+  `Admin UI` (`AdminTimetable.tsx` — Add Slot / Publish Cohort) → `TimetableSlotModal` or publish button → `POST /api/admin/timetable/create` or `PUT /api/admin/timetable/publish` → `admin.routes.ts` → `timetable.validator.ts` → `admin.controller.ts` → `Timetable.model.ts` → `Student/Teacher` timetable views update on next fetch.
 - **Owner Layer**:
-  - Frontend: `Timetable.tsx` page handles interactive coordinate grid visual rendering.
+  - Frontend: `AdminTimetable.tsx` + `TimetableOverviewTable` (read-only 7-column grid); `Timetable.tsx` for student/teacher personal schedules.
   - Backend: `admin.controller.ts` schedules route paths.
 - **Validation Point**:
   - Backend Validator: `timetable.validator.ts` Zod schema parses classroom labels, hour slot conflicts, days of the week matching.
@@ -1376,7 +1378,7 @@ This section provides an immediate high-level summary of implemented features ve
 
 ### 3. Notifications & Announcement Broadcast
 - **Current State**:
-  - Base Mongoose notification models, admin draft composer UI layouts, and target scope API parameters are built.
+  - Admin composer at `/admin/notifications` with Global / Student / Teacher targeting, department-filtered recipient lists, Zod validation (`notification.validator.ts`), and teacher inbox API (`GET /api/teacher/notifications`).
 - **Target State**:
   - System-wide real-time Toast notification broadcast alerts.
   - Active priority classifications (high/medium/low alerts) and automatic unread/read state trackers for every student context.
@@ -1414,12 +1416,12 @@ This section provides an immediate high-level summary of implemented features ve
   - Dedicated `/admin/students`, `/admin/teachers`, and `/admin/timetable` routes with Academic Intelligence (Stitch) theme.
   - Filters: department (including All), semester (1/3/5/7), search.
   - Teachers: create (`AssignTeacherModal`), list assignments, soft-remove (`DELETE /teacher/:profileId`).
-  - Students: attendance breakdown, chart, CSV export.
-  - Seed data spans four semesters; ~844 attendance records.
+  - Students: attendance breakdown, chart, CSV export, create (`AddStudentModal`), soft-remove (`DELETE /student/:id`).
+  - Seed data spans four semesters; ~844 attendance records. Demo admin: **Marcus Hale** (`ADMIN001`).
 - **Target State**:
-  - Edit existing teacher subject assignments without re-create; bulk import; student create UI on Students tab.
+  - Edit existing teacher/student profiles without re-create; bulk import.
 - **Gap**:
-  - No `PATCH` teacher profile endpoint; student tab is read-only (no inline student registration yet).
+  - No `PATCH` teacher or student profile endpoints.
 
 ## AI Context Summary
 
@@ -1430,7 +1432,7 @@ This section provides an immediate high-level summary of implemented features ve
 - **Admin URLs:** `/` (departments), `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications`.
 - **Key admin services:** `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`, `adminTimetable.service.ts`.
 - **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding. Admin UI = Stitch light glass; student/teacher UI = Neo-Shinjuku dark.
-- **Seed:** `npm run seed` in `backend/` — semesters **1, 3, 5, 7**; login `ADMIN001` / `Admin@123`.
+- **Seed:** `npm run seed` in `backend/` — semesters **1, 3, 5, 7**; admin **Marcus Hale** — `ADMIN001` / `Admin@123`.
 - **Local dev:** MongoDB via `.\scripts\start-mongo.ps1`; backend on **5001**, Vite proxy **5001**; `free-port.ps1` frees **5001** without killing Docker on **5000**. See [Local Development (Recommended)](#local-development-recommended).
 - **Final objective:** Produce an enterprise-grade, visually stunning, and rock-solid platform for managing institution attendance data with zero friction.
 
@@ -1519,7 +1521,9 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 | **Department filter** | Dropdown lists all departments plus **All Departments** (default). Empty `departmentId` returns every active student. |
 | **Semester filter** | **All Semesters** or **1 / 3 / 5 / 7** — filters `StudentProfile.semester`. Seed data distributes 50 students evenly across these semesters. |
 | **Search** | Filters by name, uni/roll number, login `userId`, or email (debounced 300ms). Default load shows **all** students matching the department filter. |
-| **Table** | Two rows per subject (**Present** / **Absent** counts). **Semester** shown on every row. Columns: Uni No, Name, Semester, Section, Subject, Total, Attendance, Count. |
+| **Table** | Two rows per subject (**Present** / **Absent** counts). **Semester** shown on every row. Columns: Uni No, Name, Semester, Section, Subject, Total, Attendance, Count, **Actions** (Remove on first row per student). |
+| **Add Student** | Toolbar → `AddStudentModal` → `POST /api/admin/student/create`. Requires a **specific** department (not All). Fields: full name, login ID, roll number, email, password, semester (1/3/5/7), section (A–D). |
+| **Remove** | **Remove** on first row per student → `DELETE /api/admin/student/:id` (User `_id`, soft-deactivates account). |
 | **Chart** | Recharts bar graph below the table — aggregated **Present** vs **Absent** for the currently filtered student set (`StudentAttendanceChart`). |
 | **Download** | **Download CSV Report** at the bottom of the table. |
 
@@ -1536,7 +1540,8 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
   "students": [
     {
       "profileId": "...",
-      "uniNo": "STU001",
+      "studentUserId": "...",
+      "uniNo": "CS2021001",
       "name": "Anjali Sharma",
       "semester": 5,
       "section": "A",
@@ -1566,6 +1571,30 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 | Molecule | `SearchField` |
 | Organism | `StudentOverviewTable` |
 | Organism | `StudentAttendanceChart` |
+| Organism | `AddStudentModal` |
+
+### API: create / remove student
+
+| Method | Path | Validator | Purpose |
+| :--- | :--- | :--- | :--- |
+| POST | `/student/create` | `createStudentSchema` in `admin.validator.ts` | New student user + profile |
+| DELETE | `/student/:id` | — | Soft-deactivate student (`User._id`) |
+
+**Create body:**
+
+```json
+{
+  "fullName": "Priya Sharma",
+  "userId": "STU051",
+  "email": "stu051@sams.edu",
+  "password": "Student@123",
+  "rollNumber": "CS2021051",
+  "departmentId": "...",
+  "semester": 5,
+  "section": "A",
+  "phone": "+91..."
+}
+```
 
 ---
 
@@ -1602,8 +1631,8 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
   "profileId": "6649f3e4...",
   "uniqueId": "EMP001",
   "loginId": "TCH001",
-  "teacherName": "Minsu Agrahari",
-  "email": "minsu@sams.edu",
+  "teacherName": "Amit Patel",
+  "email": "amit@sams.edu",
   "assignedAt": "2026-05-20T12:00:00.000Z",
   "subjectName": "Programming Fundamentals",
   "subjectCode": "CS101",
@@ -1650,22 +1679,22 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 | **Department** | Department name for the slot. |
 | **Section** | Cohort section (`A`–`D`). |
 | **Semester** | Academic semester (1–8; seed uses 1, 3, 5, 7). |
-| **Timing** | `Day · HH:MM–HH:MM · Room {roomNo}`. |
-| **Status** | `Published` or `Draft` (`isPublished`). |
-| **Actions** | Edit / Delete (requires specific department filter). |
+| **Timing** | `Day · HH:MM–HH:MM · Room {roomNo}` (room shown as subline under timing). |
+
+**Removed from table UI:** **Status** (`Published`/`Draft`) and **Actions** (row Edit/Delete). `isPublished` is still returned by the overview API and used by publish flow.
 
 ### Features
 
 | Feature | Behavior |
 | :--- | :--- |
-| **Department filter** | **All Departments** or one department. Add/edit/publish require a **specific** department. |
+| **Department filter** | **All Departments** or one department. Add/publish require a **specific** department. |
 | **Semester filter** | All or **1–8**. |
 | **Section filter** | All or **A / B / C / D**. |
 | **Search** | UID, teacher login, name, subject, department, section, timing. |
-| **Add Slot** | Opens `TimetableSlotModal` → `POST /api/admin/timetable/create`. |
-| **Edit** | Same modal → `PUT /api/admin/timetable/:id`. |
-| **Delete** | Confirm → `DELETE /api/admin/timetable/:id`. |
-| **Publish Cohort** | `PUT /api/admin/timetable/publish` with `{ departmentId, semester, section }` — sets `isPublished: true` for matching slots. |
+| **Add Slot** | Toolbar or table header → `TimetableSlotModal` → `POST /api/admin/timetable/create`. |
+| **Publish Cohort** | Toolbar → `PUT /api/admin/timetable/publish` with `{ departmentId, semester, section }` — sets `isPublished: true` for matching slots. |
+
+**Not in UI (API only):** `PUT /api/admin/timetable/:id` (update slot), `DELETE /api/admin/timetable/:id` (remove slot). `TimetableSlotModal` still supports edit mode if `editRow` is passed, but no table control sets it.
 
 ### API: timetable overview
 
@@ -1754,8 +1783,8 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 | Role | userId | Password | Notes |
 | :--- | :--- | :--- | :--- |
-| Admin | `ADMIN001` | `Admin@123` | |
-| Teacher | `TCH001` | `Teacher@123` | |
+| Admin | `ADMIN001` | `Admin@123` | Marcus Hale |
+| Teacher | `TCH001` | `Teacher@123` | Amit Patel |
 | Student | `STU001` | `Student@123` | Semester **1** |
 | Student | `STU002` | `Student@123` | Semester **3** |
 | Student | `STU003` | `Student@123` | Semester **5** |
@@ -1765,16 +1794,81 @@ Use **Semester** filter on `/admin/students` and `/admin/teachers` to view each 
 
 ---
 
+## Admin Notifications Tab — Broadcast Composer
+
+**Route:** `/admin/notifications`  
+**Page:** `frontend/src/pages/AdminNotifications.tsx`  
+**Sidebar:** Single nav item **Notifications** (`notifications` icon). Removed duplicate **Reports** and **Settings** entries that both pointed here.
+
+### Form fields
+
+| Field | Description |
+| :--- | :--- |
+| **Title** | Notification headline (required). |
+| **Message** | Body text (required). |
+| **Send to** | **Global** — all users; **Student** — one student; **Teacher** — one teacher. |
+
+### Individual targeting (Student / Teacher)
+
+1. Choose **department** via `DepartmentSelect`.
+2. Recipient dropdown loads from:
+   - **Student:** `GET /api/admin/students?department={id}&limit=500`
+   - **Teacher:** `GET /api/admin/teachers` (client-filtered by `departments` containing selected department).
+3. Submit stores `targetType` + `targetId` (User `_id` of the selected person).
+
+### Global targeting
+
+- `targetType: "all"`, no `targetId`.
+- Visible to all students (`GET /api/student/notifications`) and teachers (`GET /api/teacher/notifications`).
+
+### API: send notification
+
+- **Endpoint:** `POST /api/admin/notifications/send`
+- **Validator:** `sendNotificationSchema` in `notification.validator.ts`
+- **Controller:** `sendNotification` in `admin.controller.ts`
+
+**Body:**
+
+```json
+{
+  "title": "Exam schedule update",
+  "message": "Please check the timetable page for dates.",
+  "priority": "normal",
+  "targetType": "all"
+}
+```
+
+Individual example:
+
+```json
+{
+  "title": "Attendance warning",
+  "message": "Your attendance is below 75%.",
+  "priority": "normal",
+  "targetType": "student",
+  "targetId": "6649f3e4..."
+}
+```
+
+| `targetType` | `targetId` | Recipients |
+| :--- | :--- | :--- |
+| `all` | omitted | Every student and teacher |
+| `student` | User `_id` | That student only |
+| `teacher` | User `_id` | That teacher only |
+
+---
+
 ## Document Index (Admin & Data)
 
 | Section | Topics |
 | :--- | :--- |
 | [Local Development (Recommended)](#local-development-recommended) | Hybrid npm + MongoDB Docker, scripts, URLs |
 | [Local Dev Troubleshooting](#local-dev-troubleshooting) | MongoDB 27017, ports 5001/5000, Vite proxy |
-| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable` |
-| [Admin Timetable Tab](#admin-timetable-tab--schedule-management) | UID, timing, CRUD, publish |
+| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications` |
+| [Admin Timetable Tab](#admin-timetable-tab--schedule-management) | 7-column table, add, publish |
+| [Admin Notifications Tab](#admin-notifications-tab--broadcast-composer) | Global / student / teacher, department picker |
 | [Admin Department Dashboard](#admin-department-dashboard-stitch-ui--faculty-table) | Faculty table, assign from dept view |
-| [Admin Students Tab](#admin-students-tab--student-details-overview) | Filters, Present/Absent rows, CSV |
+| [Admin Students Tab](#admin-students-tab--student-details-overview) | Add/remove, Present/Absent rows, CSV |
 | [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview) | Assign, Remove, All Departments |
 | [Seed Data](#seed-data--multi-semester-distribution) | Semesters 1/3/5/7, `npm run seed` |
 | [Admin API Route Map](#admin-api-route-map-backendsrcroutesadminroutests) | Full REST table |

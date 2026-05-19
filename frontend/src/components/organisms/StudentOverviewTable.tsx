@@ -2,6 +2,7 @@ import { MaterialIcon } from '../atoms/MaterialIcon';
 
 export type StudentTableRow = {
   rowKey: string;
+  studentUserId?: string;
   uniNo: string;
   name: string;
   semester: number;
@@ -19,11 +20,44 @@ type StudentOverviewTableProps = {
   rows: StudentTableRow[];
   onDownload: () => void;
   downloading?: boolean;
+  onAddStudent?: () => void;
+  addDisabled?: boolean;
+  onRemoveStudent?: (studentUserId: string, studentName: string) => void;
+  removingStudentUserId?: string | null;
 };
 
-export function StudentOverviewTable({ rows, onDownload, downloading }: StudentOverviewTableProps) {
+export function StudentOverviewTable({
+  rows,
+  onDownload,
+  downloading,
+  onAddStudent,
+  addDisabled,
+  onRemoveStudent,
+  removingStudentUserId,
+}: StudentOverviewTableProps) {
+  const colSpan = onRemoveStudent ? 9 : 8;
+
   return (
     <div className="glass-card rounded-xl overflow-hidden">
+      {onAddStudent ? (
+        <div className="p-6 border-b border-outline-variant/20 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h3 className="font-outfit text-headline-md text-on-surface">Student Attendance</h3>
+            <p className="text-body-sm text-on-surface-variant">
+              Subject-wise present and absent counts. Add or remove students for the selected department.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onAddStudent}
+            disabled={addDisabled}
+            className="shrink-0 inline-flex items-center gap-2 bg-secondary text-on-secondary px-4 py-2 rounded-lg text-label-md hover:bg-primary transition-all disabled:opacity-50"
+          >
+            <MaterialIcon name="person_add" size="sm" />
+            Add Student
+          </button>
+        </div>
+      ) : null}
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left">
           <thead>
@@ -36,12 +70,17 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Total</th>
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Attendance</th>
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Count</th>
+              {onRemoveStudent ? (
+                <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider text-right">
+                  Actions
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/10">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-10 text-center text-on-surface-variant text-body-sm">
+                <td colSpan={colSpan} className="px-6 py-10 text-center text-on-surface-variant text-body-sm">
                   No students found. Try another department or search term.
                 </td>
               </tr>
@@ -100,6 +139,21 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
                       {row.count}
                     </span>
                   </td>
+                  {onRemoveStudent ? (
+                    <td className="px-6 py-3 text-right">
+                      {row.isFirstOfStudent && row.studentUserId ? (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveStudent(row.studentUserId!, row.name)}
+                          disabled={removingStudentUserId === row.studentUserId}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-label-md font-medium text-error hover:bg-error-container/30 transition-colors disabled:opacity-50"
+                        >
+                          <MaterialIcon name="person_remove" size="sm" />
+                          {removingStudentUserId === row.studentUserId ? 'Removing...' : 'Remove'}
+                        </button>
+                      ) : null}
+                    </td>
+                  ) : null}
                 </tr>
               ))
             )}
