@@ -15,6 +15,12 @@ import AdminStudents from './pages/AdminStudents.tsx';
 import AdminTeachers from './pages/AdminTeachers.tsx';
 import AdminNotifications from './pages/AdminNotifications.tsx';
 import AdminTimetable from './pages/AdminTimetable.tsx';
+import Timetable from './pages/Timetable';
+import Notifications from './pages/Notifications';
+import TeacherAttendance from './pages/TeacherAttendance';
+import TeacherAnalytics from './pages/TeacherAnalytics';
+import AdminStudents from './pages/AdminStudents';
+import AdminNotifications from './pages/AdminNotifications';
 
 const RoleRoute = ({
   allowed,
@@ -63,8 +69,19 @@ function App() {
 
   return (
     <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      
+      <Route element={user ? <AppLayout /> : <Navigate to="/login" replace />}>
+        <Route
+          path="/"
+          element={
+            user?.role === 'teacher' ? (
+              <Navigate to="/teacher/dashboard" replace />
+            ) : (
+              <Dashboard />
+            )
+          }
+        />
         <Route
           path="/attendance"
           element={
@@ -90,6 +107,14 @@ function App() {
           }
         />
         <Route
+          path="/teacher/dashboard"
+          element={
+            <RoleRoute allowed={['teacher']}>
+              <Dashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
           path="/teacher/attendance"
           element={
             <RoleRoute allowed={['teacher']}>
@@ -98,7 +123,7 @@ function App() {
           }
         />
         <Route
-          path="/teacher/analytics"
+          path="/teacher/analysis"
           element={
             <RoleRoute allowed={['teacher']}>
               <TeacherAnalytics />

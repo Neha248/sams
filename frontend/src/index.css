@@ -81,3 +81,18 @@
     box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3), 0 0 10px rgba(0, 212, 255, 0.1);
   }
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.attendance-chart-enter {
+  animation: fadeIn 0.5s ease-out;
+}
