@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { LogOut, LayoutDashboard, Calendar, ClipboardList, Bell, BarChart3, Users } from 'lucide-react';
+import { LogOut, LayoutDashboard, Calendar, ClipboardList, Bell, BarChart3, Users, Menu, X } from 'lucide-react';
 import { Outlet, NavLink } from 'react-router-dom';
 
 const AppLayout = () => {
   const { user, logout } = useAuthStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const role = user?.role;
   const navItems =
@@ -16,10 +18,9 @@ const AppLayout = () => {
         ]
       : role === 'teacher'
         ? [
-            { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+            { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
             { name: 'Mark Attendance', icon: ClipboardList, path: '/teacher/attendance' },
-            { name: 'Timetable', icon: Calendar, path: '/timetable' },
-            { name: 'Analytics', icon: BarChart3, path: '/teacher/analytics' },
+            { name: 'Analysis', icon: BarChart3, path: '/teacher/analysis' },
           ]
         : [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -29,10 +30,12 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-navy-900 text-slate-100">
-      {/* Sidebar */}
+      {/* Sidebar - Desktop */}
       <aside className="w-64 glass-panel border-r border-white/10 flex flex-col hidden md:flex">
         <div className="p-6 border-b border-white/5">
-          <h1 className="text-2xl font-bold text-neon-blue tracking-wider glow-blue">SAMS <span className="text-sm font-normal text-slate-400 block">Neo-Shinjuku</span></h1>
+          <h1 className="text-2xl font-bold text-neon-blue tracking-wider glow-blue">
+            SAMS <span className="text-sm font-normal text-slate-400 block">Neo-Shinjuku</span>
+          </h1>
         </div>
         
         <div className="p-4 flex-1">
@@ -71,25 +74,110 @@ const AppLayout = () => {
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-neon-crimson hover:bg-neon-crimson/10 rounded border border-transparent hover:border-neon-crimson/20 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-neon-crimson hover:bg-neon-crimson/10 rounded border border-transparent hover:border-neon-crimson/20 transition-all cursor-pointer"
           >
             <LogOut size={16} /> Logout
           </button>
         </div>
       </aside>
 
+      {/* Mobile Menu Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop blur overlay */}
+          <div 
+            className="fixed inset-0 bg-navy-950/60 backdrop-blur-sm transition-opacity duration-300" 
+            onClick={() => setMobileMenuOpen(false)} 
+          />
+          
+          {/* Drawer Panel */}
+          <div className="relative w-64 bg-navy-900 border-r border-white/10 flex flex-col p-6 z-10 shadow-2xl transition-transform duration-300">
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="pb-6 border-b border-white/5 mb-6">
+              <h1 className="text-2xl font-bold text-neon-blue tracking-wider glow-blue">
+                SAMS <span className="text-sm font-normal text-slate-400 block">Neo-Shinjuku</span>
+              </h1>
+            </div>
+
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-4 px-2">Navigation</p>
+              <nav className="space-y-1">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                        isActive
+                          ? 'bg-neon-blue/10 text-neon-blue border-glow-blue'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <item.icon size={18} />
+                    <span className="font-medium">{item.name}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+
+            <div className="border-t border-white/5 pt-6 bg-navy-800/30 -mx-6 px-6 -mb-6 pb-6 mt-auto">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-blue to-neon-crimson p-[2px]">
+                  <div className="w-full h-full bg-navy-900 rounded-full flex items-center justify-center">
+                    <span className="font-bold text-sm">{user?.fullName.charAt(0)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-slate-200">{user?.fullName}</p>
+                  <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-neon-crimson hover:bg-neon-crimson/10 rounded border border-transparent hover:border-neon-crimson/20 transition-all cursor-pointer"
+              >
+                <LogOut size={16} /> Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 overflow-auto relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none" />
         <div className="sticky top-0 z-20 border-b border-white/10 bg-navy-900/70 backdrop-blur">
-          <div className="px-4 py-3 flex items-center justify-between md:justify-end">
-            <div className="md:hidden">
-              <div className="text-sm font-semibold text-slate-100">{user?.fullName}</div>
-              <div className="text-xs text-slate-500 capitalize">{user?.role}</div>
+          <div className="px-4 py-3 flex items-center justify-between">
+            {/* Mobile Header Menu Trigger */}
+            <div className="md:hidden flex items-center gap-3">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/5 rounded cursor-pointer"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <div className="text-sm font-semibold text-slate-100">{user?.fullName}</div>
+                <div className="text-xs text-slate-500 capitalize">{user?.role}</div>
+              </div>
             </div>
+            
+            {/* Desktop User Info display */}
+            <div className="hidden md:block">
+              <span className="text-xs text-slate-500 tracking-wider">Access Terminal Secured</span>
+            </div>
+
             <button
               onClick={logout}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-200 bg-white/5 border border-white/10 rounded hover:border-neon-crimson/30 hover:text-neon-crimson transition-all"
+              className="inline-flex items-center gap-2 px-3 py-2 text-sm text-slate-200 bg-white/5 border border-white/10 rounded hover:border-neon-crimson/30 hover:text-neon-crimson transition-all cursor-pointer"
             >
               <LogOut size={16} /> Logout
             </button>

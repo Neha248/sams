@@ -32,7 +32,16 @@ function App() {
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       
       <Route element={user ? <AppLayout /> : <Navigate to="/login" replace />}>
-        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/"
+          element={
+            user?.role === 'teacher' ? (
+              <Navigate to="/teacher/dashboard" replace />
+            ) : (
+              <Dashboard />
+            )
+          }
+        />
         <Route
           path="/attendance"
           element={
@@ -58,6 +67,14 @@ function App() {
           }
         />
         <Route
+          path="/teacher/dashboard"
+          element={
+            <RoleRoute allowed={['teacher']}>
+              <Dashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
           path="/teacher/attendance"
           element={
             <RoleRoute allowed={['teacher']}>
@@ -66,7 +83,7 @@ function App() {
           }
         />
         <Route
-          path="/teacher/analytics"
+          path="/teacher/analysis"
           element={
             <RoleRoute allowed={['teacher']}>
               <TeacherAnalytics />
