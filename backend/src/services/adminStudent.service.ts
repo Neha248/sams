@@ -60,11 +60,15 @@ function matchesSearch(
 
 export async function getStudentAttendanceOverview(params: {
   departmentId?: string;
+  semester?: number;
   search?: string;
 }): Promise<StudentOverviewResult> {
   const profileFilter: Record<string, unknown> = {};
   if (params.departmentId) {
     profileFilter.departmentId = new mongoose.Types.ObjectId(params.departmentId);
+  }
+  if (params.semester !== undefined) {
+    profileFilter.semester = params.semester;
   }
 
   const profiles = await StudentProfile.find(profileFilter)

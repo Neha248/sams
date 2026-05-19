@@ -8,6 +8,8 @@ import {
   getSubjectsByDepartment,
   getStudentsAttendanceOverview,
   exportStudentsAttendance,
+  getTeachersAssignmentsOverview,
+  deleteTeacher,
 } from '../controllers/admin.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorizeRoles } from '../middlewares/role.middleware';
@@ -27,8 +29,10 @@ router.get('/students', getAllStudents);
 router.post('/student/create', createStudent);
 router.delete('/student/:id', deleteStudent);
 
+router.get('/teachers/overview', getTeachersAssignmentsOverview);
 router.get('/teachers', getAllTeachers);
 router.post('/teacher/create', createTeacher);
+router.delete('/teacher/:profileId', deleteTeacher);
 
 router.get('/departments', getAllDepartments);
 router.post('/department/create', createDepartment);

@@ -12,6 +12,7 @@ import Notifications from './pages/Notifications.tsx';
 import TeacherAttendance from './pages/TeacherAttendance.tsx';
 import TeacherAnalytics from './pages/TeacherAnalytics.tsx';
 import AdminStudents from './pages/AdminStudents.tsx';
+import AdminTeachers from './pages/AdminTeachers.tsx';
 import AdminNotifications from './pages/AdminNotifications.tsx';
 
 const RoleRoute = ({
@@ -49,6 +50,7 @@ function App() {
         <Route element={<AdminStitchLayout />}>
           <Route path="/" element={<DepartmentDashboard />} />
           <Route path="/admin/students" element={<AdminStudents />} />
+          <Route path="/admin/teachers" element={<AdminTeachers />} />
           <Route path="/admin/notifications" element={<AdminNotifications />} />
         </Route>
         <Route path="/login" element={<Navigate to="/" replace />} />

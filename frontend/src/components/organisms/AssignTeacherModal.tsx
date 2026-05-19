@@ -2,12 +2,13 @@ import { FormEvent, useEffect, useState } from 'react';
 import api from '../../lib/axios';
 import { MaterialIcon } from '../atoms/MaterialIcon';
 
-export type SubjectOption = { _id: string; name: string; code: string };
+export type SubjectOption = { _id: string; name: string; code: string; semester?: number };
 
 type AssignTeacherModalProps = {
   open: boolean;
   departmentId: string;
   departmentName: string;
+  semesterFilter?: string;
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -19,6 +20,7 @@ export function AssignTeacherModal({
   open,
   departmentId,
   departmentName,
+  semesterFilter = '',
   onClose,
   onSuccess,
 }: AssignTeacherModalProps) {
@@ -38,17 +40,19 @@ export function AssignTeacherModal({
     if (!open || !departmentId) return;
     setError('');
     setLoadingSubjects(true);
+    const params: Record<string, string> = { departmentId };
+    if (semesterFilter) params.semester = semesterFilter;
     api
-      .get('/admin/subjects', { params: { departmentId } })
+      .get('/admin/subjects', { params })
       .then((res) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const list = ((res as any).data ?? []) as SubjectOption[];
+        const list = ((res as any).data ?? []) as Array<SubjectOption & { semester?: number }>;
         setSubjects(list);
-        if (list.length === 1) setSelectedSubjects([list[0]._id]);
+        setSelectedSubjects(list.length === 1 ? [list[0]._id] : []);
       })
       .catch((err) => setError(String(err)))
       .finally(() => setLoadingSubjects(false));
-  }, [open, departmentId]);
+  }, [open, departmentId, semesterFilter]);
 
   const resetForm = () => {
     setFullName('');
@@ -118,6 +122,12 @@ export function AssignTeacherModal({
             </h2>
             <p className="text-body-sm text-on-surface-variant mt-1">
               Department: <span className="font-medium text-primary">{departmentName}</span>
+              {semesterFilter ? (
+                <>
+                  {' '}
+                  · Semester: <span className="font-medium text-primary">{semesterFilter}</span>
+                </>
+              ) : null}
             </p>
           </div>
           <button
@@ -213,7 +223,8 @@ export function AssignTeacherModal({
                           : 'bg-surface-container-low text-on-surface-variant border-outline-variant/30 hover:border-primary/30'
                       }`}
                     >
-                      {s.name} ({s.code})
+                      {s.name} ({s.code}
+                      {s.semester ? ` · Sem ${s.semester}` : ''})
                     </button>
                   );
                 })}

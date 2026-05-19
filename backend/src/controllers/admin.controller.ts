@@ -16,6 +16,7 @@ import {
   buildStudentAttendanceCsv,
   getStudentAttendanceOverview,
 } from '../services/adminStudent.service';
+import { getTeacherAssignmentsOverview } from '../services/adminTeacher.service';
 import { createTeacherSchema } from '../validators/admin.validator';
 
 // GET /api/admin/dashboard
@@ -98,12 +99,17 @@ export const createTeacher = async (req: AuthRequest, res: Response): Promise<vo
 // GET /api/admin/subjects?departmentId=
 export const getSubjectsByDepartment = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { departmentId } = req.query;
+    const { departmentId, semester } = req.query;
     if (!departmentId || typeof departmentId !== 'string') {
       sendError(res, 'departmentId query parameter is required', 400);
       return;
     }
-    const subjects = await Subject.find({ departmentId }).select('name code semester credits');
+    const filter: Record<string, unknown> = { departmentId };
+    if (typeof semester === 'string' && semester !== '') {
+      const semesterNum = Number(semester);
+      if (!Number.isNaN(semesterNum)) filter.semester = semesterNum;
+    }
+    const subjects = await Subject.find(filter).select('name code semester credits').sort({ semester: 1, code: 1 });
     sendSuccess(res, subjects);
   } catch (err) {
     sendError(res, (err as Error).message);
@@ -243,12 +249,32 @@ export const getAdminAnalytics = async (req: Request, res: Response): Promise<vo
   }
 };
 
-// GET /api/admin/students/overview?departmentId=&search=
+// GET /api/admin/students/overview?departmentId=&semester=&search=
 export const getStudentsAttendanceOverview = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { departmentId, search } = req.query;
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
     const result = await getStudentAttendanceOverview({
       departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/teachers/overview?departmentId=&semester=&search=
+export const getTeachersAssignmentsOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getTeacherAssignmentsOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
       search: typeof search === 'string' ? search : undefined,
     });
     sendSuccess(res, result);
@@ -260,9 +286,12 @@ export const getStudentsAttendanceOverview = async (req: Request, res: Response)
 // GET /api/admin/students/export?departmentId=&search=
 export const exportStudentsAttendance = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { departmentId, search } = req.query;
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
     const result = await getStudentAttendanceOverview({
       departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
       search: typeof search === 'string' ? search : undefined,
     });
     const csv = buildStudentAttendanceCsv(result.exportRows);
@@ -303,6 +332,29 @@ export const deleteStudent = async (req: Request, res: Response): Promise<void> 
     const user = await User.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
     if (!user) { sendError(res, 'Student not found', 404); return; }
     sendSuccess(res, null, 'Student deactivated');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// DELETE /api/admin/teacher/:profileId — soft-deactivate teacher user account
+export const deleteTeacher = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const profile = await TeacherProfile.findById(req.params.profileId);
+    if (!profile) {
+      sendError(res, 'Teacher not found', 404);
+      return;
+    }
+    const user = await User.findByIdAndUpdate(
+      profile.userId,
+      { isActive: false },
+      { new: true }
+    );
+    if (!user || user.role !== 'teacher') {
+      sendError(res, 'Teacher user not found', 404);
+      return;
+    }
+    sendSuccess(res, null, 'Teacher removed successfully');
   } catch (err) {
     sendError(res, (err as Error).message);
   }

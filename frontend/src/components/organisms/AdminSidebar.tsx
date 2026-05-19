@@ -5,7 +5,7 @@ import { NavItem } from '../molecules/NavItem';
 const ADMIN_NAV = [
   { to: '/', icon: 'domain', label: 'Departments', end: true },
   { to: '/admin/students', icon: 'group', label: 'Students' },
-  { to: '/admin/students', icon: 'school', label: 'Teachers' },
+  { to: '/admin/teachers', icon: 'school', label: 'Teachers' },
   { to: '/admin/notifications', icon: 'assessment', label: 'Reports' },
   { to: '/admin/notifications', icon: 'settings', label: 'Settings' },
 ];

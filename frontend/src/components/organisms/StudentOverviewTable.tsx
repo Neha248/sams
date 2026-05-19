@@ -59,8 +59,8 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
                   <td className="px-6 py-3 text-body-sm font-bold text-on-surface">
                     {row.isFirstOfStudent ? row.name : ''}
                   </td>
-                  <td className="px-6 py-3 text-body-sm text-on-surface-variant">
-                    {row.isFirstOfStudent ? row.semester : ''}
+                  <td className="px-6 py-3 text-body-sm text-on-surface-variant font-medium">
+                    {row.semester}
                   </td>
                   <td className="px-6 py-3 text-body-sm text-on-surface-variant">
                     {row.isFirstOfStudent ? row.section : ''}

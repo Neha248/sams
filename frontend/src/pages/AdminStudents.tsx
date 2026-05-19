@@ -5,6 +5,7 @@ import { MaterialIcon } from '../components/atoms/MaterialIcon';
 import { DepartmentFilterSelect } from '../components/molecules/DepartmentFilterSelect';
 import type { DepartmentOption } from '../components/molecules/DepartmentSelect';
 import { SearchField } from '../components/molecules/SearchField';
+import { SemesterFilterSelect } from '../components/molecules/SemesterFilterSelect';
 import { StudentAttendanceChart } from '../components/organisms/StudentAttendanceChart';
 import {
   StudentOverviewTable,
@@ -90,6 +91,7 @@ function buildTableRows(students: StudentOverview[]): StudentTableRow[] {
 const AdminStudents = () => {
   const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [departmentId, setDepartmentId] = useState('');
+  const [semester, setSemester] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [students, setStudents] = useState<StudentOverview[]>([]);
@@ -120,6 +122,7 @@ const AdminStudents = () => {
     try {
       const params: Record<string, string> = {};
       if (departmentId) params.departmentId = departmentId;
+      if (semester) params.semester = semester;
       if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
 
       const res = (await api.get('/admin/students/overview', { params })) as {
@@ -134,7 +137,7 @@ const AdminStudents = () => {
     } finally {
       setLoading(false);
     }
-  }, [departmentId, debouncedSearch]);
+  }, [departmentId, semester, debouncedSearch]);
 
   useEffect(() => {
     void loadOverview();
@@ -148,6 +151,7 @@ const AdminStudents = () => {
     try {
       await downloadAdminStudentReport({
         departmentId: departmentId || undefined,
+        semester: semester || undefined,
         search: debouncedSearch,
       });
     } catch (err) {
@@ -169,8 +173,8 @@ const AdminStudents = () => {
           Student Details Overview
         </h1>
         <p className="text-on-surface-variant text-body-md max-w-2xl">
-          View all students with subject-wise attendance. Filter by department or search by name,
-          roll number, or email.
+          View all students with subject-wise attendance. Filter by department, semester, or search
+          by name, roll number, or email.
         </p>
       </div>
 
@@ -180,7 +184,8 @@ const AdminStudents = () => {
           value={departmentId}
           onChange={setDepartmentId}
         />
-        <div className="flex-1">
+        <SemesterFilterSelect value={semester} onChange={setSemester} />
+        <div className="flex-1 min-w-[240px]">
           <label className="block text-label-md text-outline mb-1.5 ml-2">Search Students</label>
           <SearchField
             placeholder="Search by name, uni no, or email..."

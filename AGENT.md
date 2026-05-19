@@ -16,6 +16,8 @@
   - Dynamic "Safe Line" (75% rule) calculations.
   - Attendance tracking with compound index constraints.
   - Full dashboards for Admins, Teachers, and Students.
+  - Admin portals: student attendance overview, teacher assignment CRUD (create/remove), department faculty analytics.
+  - Multi-semester cohorts (seed + filters on semesters 1, 3, 5, 7).
   - PDF export for reports using `pdfkit`.
 - **Long-term vision**: To become a highly scalable, multi-tenant capable educational ERP that can be easily deployed by various institutions seeking a premium software experience.
 
@@ -30,6 +32,10 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Authentication**: Full JWT auth backend & frontend routing guards integration.
 - ✅ **Role system**: Explicit Admin/Teacher/Student workflows and route protections.
 - ✅ **Docker setup**: Fully functional Multi-Container environment with backend, frontend, MongoDB, and Mongo-Express.
+- ✅ **Admin Students portal** (`/admin/students`): Department + semester filters, subject-wise attendance table (Present/Absent rows), Recharts summary, CSV export — `adminStudent.service.ts`.
+- ✅ **Admin Teachers portal** (`/admin/teachers`): Separate route from students; assignment table; create via `AssignTeacherModal`; soft-remove via `DELETE /api/admin/teacher/:profileId` — `adminTeacher.service.ts`.
+- ✅ **Admin Department dashboard** (`/`): Faculty attendance table + assign teacher (Stitch Academic Intelligence theme).
+- ✅ **Multi-semester seed data**: Students, teachers, subjects, timetables, and attendance distributed across semesters **1, 3, 5, 7** (`backend/scripts/seed.ts`).
 
 #### In Progress:
 - 🚧 **Attendance tracking**: Core schemas and seed data done. Teacher attendance UI grids and 75% visual checks are partially implemented but need complete interactive integration.
@@ -61,7 +67,7 @@ This section helps future AI agents understand the current implementation progre
 Goal: Use this status overview to quickly determine which systems to write, extend, or configure without repeating existing boilerplate.
 
 ## System Architecture Overview
-- **Frontend architecture**: React 18 initialized via Vite, utilizing Tailwind CSS for the custom Neo-Shinjuku theme (with Shadcn UI logic). Zustand is used for state management with local-storage persistence. React Router v6 for routing, Axios for API calls, and Lucide-React/Recharts for visuals.
+- **Frontend architecture**: React 18 initialized via Vite, utilizing Tailwind CSS. **Dual themes:** Neo-Shinjuku Night (`AppLayout` — student/teacher) and Academic Intelligence / Stitch glass (`AdminStitchLayout` — admin). Atomic design under `components/{atoms,molecules,organisms,templates}`. Zustand for auth state; React Router v6; Axios; Recharts on admin Students tab.
 - **Backend architecture**: Node.js powered by Express, written in strict TypeScript. Follows a layered architecture with controllers, services, middlewares, models, and routes. Validations are enforced using Zod.
 - **Database structure**: MongoDB inside a Docker container, accessed via Mongoose. Includes models like `User`, `StudentProfile`, `TeacherProfile`, `Department`, `Subject`, `Timetable`, `Attendance`, and `Notification`.
 - **APIs**: RESTful JSON endpoints grouped under `/api/*`. Divided by concerns (Auth, Student, Teacher, Admin). 
@@ -411,6 +417,69 @@ This section defines the API endpoints, request/response models, authorization r
 - **Service Used**: Subject configuration builder.
 - **Models Touched**: `Subject.model.ts` (Write).
 
+#### 3. `GET /students/overview`
+- **Purpose**: Attendance overview for admin Students tab — one entry per student with per-subject aggregates and chart totals.
+- **Actual Codebase Endpoint**: `/api/admin/students/overview?departmentId=&semester=&search=`
+- **Authorization**: JWT; `admin` only.
+- **Service Used**: `getStudentAttendanceOverview()` in `adminStudent.service.ts`.
+- **Models Touched**: `StudentProfile`, `Attendance`, `Subject` (Read).
+
+#### 4. `GET /students/export`
+- **Purpose**: Download UTF-8 CSV of filtered student attendance rows.
+- **Actual Codebase Endpoint**: `/api/admin/students/export?departmentId=&semester=&search=`
+- **Service Used**: `buildStudentAttendanceCsv()` in `adminStudent.service.ts`.
+
+#### 5. `GET /teachers/overview`
+- **Purpose**: Expand each teacher profile into one row per assigned subject (department, semester, assignment date).
+- **Actual Codebase Endpoint**: `/api/admin/teachers/overview?departmentId=&semester=&search=`
+- **Query notes**: Omit `departmentId` for **all departments**; omit `semester` for all semesters.
+- **Service Used**: `getTeacherAssignmentsOverview()` in `adminTeacher.service.ts`.
+- **Models Touched**: `TeacherProfile`, `User`, `Subject`, `Department` (Read).
+
+#### 6. `POST /teacher/create`
+- **Purpose**: Create teacher `User` + `TeacherProfile` with department and subject assignments.
+- **Actual Codebase Endpoint**: `/api/admin/teacher/create`
+- **Validator**: `createTeacherSchema` in `admin.validator.ts`.
+- **Models Touched**: `User`, `TeacherProfile` (Write).
+
+#### 7. `DELETE /teacher/:profileId`
+- **Purpose**: Soft-remove teacher (sets linked `User.isActive` to `false`).
+- **Actual Codebase Endpoint**: `/api/admin/teacher/:profileId`
+- **Models Touched**: `TeacherProfile` (Read), `User` (Write).
+
+#### 8. `GET /subjects`
+- **Purpose**: List subjects for a department; optional `semester` query for assign-teacher modal.
+- **Actual Codebase Endpoint**: `/api/admin/subjects?departmentId={required}&semester={optional}`
+
+#### 9. `GET /faculty-attendance`
+- **Purpose**: Department dashboard — present/absent counts per teacher–subject pair.
+- **Actual Codebase Endpoint**: `/api/admin/faculty-attendance?departmentId={id}`
+- **Service Used**: `getFacultySubjectAttendanceByDepartment()` in `adminAttendance.service.ts`.
+
+### Admin API Route Map (`backend/src/routes/admin.routes.ts`)
+
+| Method | Path | Handler |
+| :--- | :--- | :--- |
+| GET | `/dashboard` | `getAdminDashboard` |
+| GET | `/analytics` | `getAdminAnalytics` |
+| GET | `/faculty-attendance` | `getFacultySubjectAttendance` |
+| GET | `/subjects` | `getSubjectsByDepartment` |
+| GET | `/students/overview` | `getStudentsAttendanceOverview` |
+| GET | `/students/export` | `exportStudentsAttendance` |
+| GET | `/students` | `getAllStudents` |
+| POST | `/student/create` | `createStudent` |
+| DELETE | `/student/:id` | `deleteStudent` (User `_id`) |
+| GET | `/teachers/overview` | `getTeachersAssignmentsOverview` |
+| GET | `/teachers` | `getAllTeachers` |
+| POST | `/teacher/create` | `createTeacher` |
+| DELETE | `/teacher/:profileId` | `deleteTeacher` |
+| GET | `/departments` | `getAllDepartments` |
+| POST | `/department/create` | `createDepartment` |
+| POST | `/subject/create` | `createSubject` |
+| POST | `/timetable/create` | `createTimetable` |
+| PUT | `/timetable/publish` | `publishTimetable` |
+| POST | `/notifications/send` | `sendNotification` |
+
 ## Frontend Routing Structure
 
 This section outlines client-side routes, their visual page layouts, component dependencies, state store bounds, API requirements, and role access clearances to help developers manage routing logic seamlessly.
@@ -475,15 +544,32 @@ This section outlines client-side routes, their visual page layouts, component d
 
 ### Admin Navigation Domain
 
-#### 1. Route: `/admin/students` (Student Accounts Directory)
+Admin sidebar (`AdminSidebar.tsx`):
+
+| Label | Route |
+| :--- | :--- |
+| Departments | `/` |
+| Students | `/admin/students` |
+| Teachers | `/admin/teachers` |
+| Reports / Settings | `/admin/notifications` (placeholder) |
+
+#### 1. Route: `/admin/students` (Student Attendance Overview)
 - **Page Owner**: `AdminStudents.tsx`
-- **Components Used**: Student registration modal forms, paginated listing tables, search/filter bars, delete confirmation prompts.
+- **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField`, `StudentOverviewTable`, `StudentAttendanceChart`
 - **Store Dependencies**: `useAuthStore` (validates admin credentials).
-- **API Dependencies**: `GET /api/admin/students`, `POST /api/admin/student/create`, `DELETE /api/admin/student/:id`, `GET /api/admin/departments`
-- **Expected Behavior**: Centralized user control hub. Admins can search the directory, create new user records with default hashed credentials, assign department cohorts, and deactivate/delete student accounts.
+- **API Dependencies**: `GET /api/admin/students/overview`, `GET /api/admin/students/export`, `GET /api/admin/departments`
+- **Expected Behavior**: Filter students by department (including **All Departments**), semester (1/3/5/7), and search. Table shows two rows per subject (Present/Absent). Chart and CSV export respect active filters. See [Admin Students Tab](#admin-students-tab--student-details-overview).
 - **Role Access**: `admin`
 
-#### 2. Route: `/admin/notifications` (Institutional Broadcast Console)
+#### 2. Route: `/admin/teachers` (Teacher Assignments Overview)
+
+- **Page Owner**: `AdminTeachers.tsx`
+- **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField`, `TeacherAssignmentsTable`, `AssignTeacherModal`
+- **API Dependencies**: `GET /api/admin/teachers/overview`, `GET /api/admin/departments`, `GET /api/admin/subjects?departmentId=&semester=`, `POST /api/admin/teacher/create`, `DELETE /api/admin/teacher/:profileId`
+- **Expected Behavior**: Lists one row per teacher–subject assignment. **All Departments** works (no forced default dept). **Assign New Teacher** requires a specific department (not All). **Remove** soft-deletes teacher on first row of each lecturer. See [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview).
+- **Role Access**: `admin`
+
+#### 3. Route: `/admin/notifications` (Institutional Broadcast Console)
 - **Page Owner**: `AdminNotifications.tsx`
 - **Components Used**: Broadcast scope checkboxes (Global, Department, Section), rich message editor cards, priority level markers.
 - **Store Dependencies**: `useAuthStore` (reads sender profile metadata).
@@ -513,8 +599,17 @@ SAMS-update/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   ├── lib/
+│   │   │   ├── atoms/          # MaterialIcon, etc.
+│   │   │   ├── molecules/      # DepartmentFilterSelect, SemesterFilterSelect, SearchField, NavItem
+│   │   │   ├── organisms/      # AdminSidebar, StudentOverviewTable, TeacherAssignmentsTable, AssignTeacherModal, FacultyTable
+│   │   │   ├── templates/      # AdminStitchLayout
+│   │   │   └── AppLayout.tsx   # Neo-Shinjuku layout (student/teacher)
+│   │   ├── lib/                # axios.ts, download.ts, utils.ts
 │   │   ├── pages/
+│   │   │   ├── admin/DepartmentDashboard.tsx
+│   │   │   ├── AdminStudents.tsx
+│   │   │   ├── AdminTeachers.tsx
+│   │   │   └── …
 │   │   ├── store/
 │   │   ├── App.tsx
 │   │   └── main.tsx
@@ -586,7 +681,7 @@ SAMS-update/
 - **Why it exists:** Abstracts complexity away from controllers.
 - **Dependencies:** Models, Utils.
 - **Rules:** Can be called by multiple controllers.
-- **Examples:** `pdf.service.ts`.
+- **Examples:** `pdf.service.ts`, `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`.
 - **Future expansion possibilities:** Notification dispatch services, reporting engines.
 
 ### `backend/src/utils/`
@@ -1149,13 +1244,28 @@ This section provides an immediate high-level summary of implemented features ve
 - **Gap**:
   - Separate React Native repository workspace and native client connection services do not exist.
 
+### 7. Admin Student & Teacher Management Portals
+- **Current State**:
+  - Dedicated `/admin/students` and `/admin/teachers` routes with Academic Intelligence (Stitch) theme.
+  - Filters: department (including All), semester (1/3/5/7), search.
+  - Teachers: create (`AssignTeacherModal`), list assignments, soft-remove (`DELETE /teacher/:profileId`).
+  - Students: attendance breakdown, chart, CSV export.
+  - Seed data spans four semesters; ~844 attendance records.
+- **Target State**:
+  - Edit existing teacher subject assignments without re-create; bulk import; student create UI on Students tab.
+- **Gap**:
+  - No `PATCH` teacher profile endpoint; student tab is read-only (no inline student registration yet).
+
 ## AI Context Summary
 
 **Quick AI Understanding**
 - **What the project is:** A full-stack, Dockerized Node/React ERP system for managing educational attendance (Admin, Teacher, Student workflows).
-- **How folders work:** Heavily segmented. Backend (`src/controllers, src/models, src/routes`) and Frontend (`src/pages, src/components, src/lib`).
+- **How folders work:** Backend: `controllers` → `services` → `models`. Frontend: `pages` orchestrate; `components/{atoms,molecules,organisms,templates}` for UI; admin uses `AdminStitchLayout`, student/teacher use `AppLayout` (Neo-Shinjuku).
 - **Architecture:** Node.js/Express (Backend) + React/Vite (Frontend) + MongoDB. Connected via REST API and JWT Auth.
-- **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding, adhere to the "Neo-Shinjuku Night" aesthetic.
+- **Admin URLs:** `/` (departments), `/admin/students`, `/admin/teachers`, `/admin/notifications`.
+- **Key admin services:** `adminStudent.service.ts`, `adminTeacher.service.ts`, `adminAttendance.service.ts`.
+- **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding. Admin UI = Stitch light glass; student/teacher UI = Neo-Shinjuku dark.
+- **Seed:** `npm run seed` in `backend/` — semesters **1, 3, 5, 7**; login `ADMIN001` / `Admin@123`.
 - **Final objective:** Produce an enterprise-grade, visually stunning, and rock-solid platform for managing institution attendance data with zero friction.
 
 ---
@@ -1224,7 +1334,7 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
     "subjects": ["<subjectObjectId>"]
   }
   ```
-- **Subjects dropdown:** `GET /api/admin/subjects?departmentId={id}` — lists subjects for the selected department so admin can assign at least one course.
+- **Subjects dropdown:** `GET /api/admin/subjects?departmentId={id}&semester={optional}` — lists subjects for the department (optionally filtered by semester when opened from Teachers page).
 - **After create:** Modal closes and faculty table refreshes via `GET /api/admin/faculty-attendance?departmentId={id}`.
 - **Errors:** Duplicate `userId` or `email` returns `409`; validation errors return `422`.
 
@@ -1241,14 +1351,15 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 | Feature | Behavior |
 | :--- | :--- |
 | **Department filter** | Dropdown lists all departments plus **All Departments** (default). Empty `departmentId` returns every active student. |
+| **Semester filter** | **All Semesters** or **1 / 3 / 5 / 7** — filters `StudentProfile.semester`. Seed data distributes 50 students evenly across these semesters. |
 | **Search** | Filters by name, uni/roll number, login `userId`, or email (debounced 300ms). Default load shows **all** students matching the department filter. |
-| **Table** | One row per student **per subject**; first row of each student shows Uni No, Name, Semester, Section; following rows show additional subjects only. Columns: Uni No, Name, Semester, Section, Subject, Total, Present, Absent. |
+| **Table** | Two rows per subject (**Present** / **Absent** counts). **Semester** shown on every row. Columns: Uni No, Name, Semester, Section, Subject, Total, Attendance, Count. |
 | **Chart** | Recharts bar graph below the table — aggregated **Present** vs **Absent** for the currently filtered student set (`StudentAttendanceChart`). |
 | **Download** | **Download CSV Report** at the bottom of the table. |
 
 ### API: student attendance overview
 
-- **Endpoint:** `GET /api/admin/students/overview?departmentId={optional}&search={optional}`
+- **Endpoint:** `GET /api/admin/students/overview?departmentId={optional}&semester={optional}&search={optional}`
 - **Service:** `backend/src/services/adminStudent.service.ts` → `getStudentAttendanceOverview()`
 - **Logic:** Loads `StudentProfile` records (optional department filter + search), aggregates `Attendance` by `studentId` + `subjectId`. `late` counts as **Present**.
 
@@ -1275,7 +1386,7 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 
 ### API: CSV export
 
-- **Endpoint:** `GET /api/admin/students/export?departmentId={optional}&search={optional}`
+- **Endpoint:** `GET /api/admin/students/export?departmentId={optional}&semester={optional}&search={optional}`
 - **Format:** UTF-8 CSV with BOM; filename `sams_students_attendance_YYYY-MM-DD.csv`
 - **Columns:** `Uni No`, `Name`, `Subject`, `Subject Code`, `Semester`, `Section`, `Total`, `Present`, `Absent`
 - **Frontend:** `frontend/src/lib/download.ts` → `downloadAdminStudentReport()` (uses `fetch` + blob download)
@@ -1285,6 +1396,113 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 | Layer | Component |
 | :--- | :--- |
 | Molecule | `DepartmentFilterSelect` (includes “All Departments”) |
+| Molecule | `SemesterFilterSelect` (All / 1–8; seed uses 1, 3, 5, 7) |
 | Molecule | `SearchField` |
 | Organism | `StudentOverviewTable` |
 | Organism | `StudentAttendanceChart` |
+
+---
+
+## Admin Teachers Tab — Teacher Assignments Overview
+
+**Route:** `/admin/teachers`  
+**Page:** `frontend/src/pages/AdminTeachers.tsx`  
+**Theme:** Academic Intelligence (Stitch admin layout)
+
+### Features
+
+| Feature | Behavior |
+| :--- | :--- |
+| **Department filter** | **All Departments** (default, shows every dept) or one dept. Assign requires a **specific** department (not All). |
+| **Semester filter** | All Semesters or **1 / 3 / 5 / 7** — filters rows by `Subject.semester` on each assignment. |
+| **Search** | Name, employee ID (`employeeId`), login `userId`, or email. |
+| **Table** | One row per teacher–subject: Unique ID (`employeeId`), Teacher Name, Email, Date Assigned (`TeacherProfile.createdAt`), Subject, Department, Semester. |
+| **Assign New Teacher** | Opens `AssignTeacherModal` — requires a **specific** department (not All Departments). `POST /api/admin/teacher/create`; subjects from `GET /api/admin/subjects?departmentId=&semester=`. |
+| **Remove Teacher** | **Remove** on the first row of each teacher — `DELETE /api/admin/teacher/:profileId` (soft-deactivates `User.isActive`). |
+| **All Departments filter** | Empty `departmentId` returns teachers from **all** departments (no auto-select to first dept). |
+
+### API: teacher assignments overview
+
+- **Endpoint:** `GET /api/admin/teachers/overview?departmentId={optional}&semester={optional}&search={optional}` — omit `departmentId` for all departments.
+- **Remove:** `DELETE /api/admin/teacher/:profileId` — deactivates the linked `User` account (`isActive: false`).
+- **Service:** `backend/src/services/adminTeacher.service.ts` → `getTeacherAssignmentsOverview()`
+- **Logic:** Expands each `TeacherProfile.subjects[]` into rows; enriches subject name/code, department, and semester from `Subject` + `Department`.
+
+**Response shape (array item):**
+
+```json
+{
+  "rowId": "profileId-subjectId",
+  "profileId": "6649f3e4...",
+  "uniqueId": "EMP001",
+  "loginId": "TCH001",
+  "teacherName": "Minsu Agrahari",
+  "email": "minsu@sams.edu",
+  "assignedAt": "2026-05-20T12:00:00.000Z",
+  "subjectName": "Programming Fundamentals",
+  "subjectCode": "CS101",
+  "departmentName": "Computer Science (CS)",
+  "departmentCode": "CS",
+  "semester": 1
+}
+```
+
+### Atomic components (teachers tab)
+
+| Layer | Component |
+| :--- | :--- |
+| Molecule | `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField` |
+| Organism | `TeacherAssignmentsTable` (**Assign New Teacher**, **Remove** per lecturer) |
+| Organism | `AssignTeacherModal` (shared with Department Dashboard) |
+
+### API: remove teacher
+
+- **Endpoint:** `DELETE /api/admin/teacher/:profileId`
+- **Controller:** `deleteTeacher` in `admin.controller.ts`
+- **Behavior:** Finds `TeacherProfile` by `_id`, sets `User.isActive = false` for linked account. Teacher disappears from overview on refresh.
+- **UI:** Confirm dialog → **Remove** on first row of each teacher in `TeacherAssignmentsTable`.
+
+### API: create teacher (shared)
+
+See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Teachers tab refreshes via `GET /api/admin/teachers/overview` after create.
+
+---
+
+## Seed Data — Multi-Semester Distribution
+
+**Script:** `backend/scripts/seed.ts` — run `npm run seed` from `backend/` (requires MongoDB).
+
+| Entity | Distribution |
+| :--- | :--- |
+| **Subjects (CS)** | 15 courses across semesters **1, 3, 5, 7** (e.g. CS101 sem 1, CS201 sem 3, CS501 sem 5, CS701 sem 7). |
+| **Subjects (IT)** | 4 courses across semesters **1, 3, 5, 7**. |
+| **Students (50)** | Rotating `semester` **1 → 3 → 5 → 7** (~13 per semester); all CS department; sections A/B/C. |
+| **Teachers (12)** | Assigned to subjects matching their semester; CS + IT departments. |
+| **Timetable** | Slots per semester × section × subject. |
+| **Attendance** | Last 30 weekdays generated per timetable slot for matching student cohort. |
+
+**Demo logins after seed:**
+
+| Role | userId | Password | Notes |
+| :--- | :--- | :--- | :--- |
+| Admin | `ADMIN001` | `Admin@123` | |
+| Teacher | `TCH001` | `Teacher@123` | |
+| Student | `STU001` | `Student@123` | Semester **1** |
+| Student | `STU002` | `Student@123` | Semester **3** |
+| Student | `STU003` | `Student@123` | Semester **5** |
+| Student | `STU004` | `Student@123` | Semester **7** |
+
+Use **Semester** filter on `/admin/students` and `/admin/teachers` to view each cohort.
+
+---
+
+## Document Index (Admin & Data)
+
+| Section | Topics |
+| :--- | :--- |
+| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers` |
+| [Admin Department Dashboard](#admin-department-dashboard-stitch-ui--faculty-table) | Faculty table, assign from dept view |
+| [Admin Students Tab](#admin-students-tab--student-details-overview) | Filters, Present/Absent rows, CSV |
+| [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview) | Assign, Remove, All Departments |
+| [Seed Data](#seed-data--multi-semester-distribution) | Semesters 1/3/5/7, `npm run seed` |
+| [Admin API Route Map](#admin-api-route-map-backendsrcroutesadminroutests) | Full REST table |

@@ -201,7 +201,9 @@ Only for [http://localhost:8081](http://localhost:8081):
 
 - Student: `/`, `/attendance`, `/timetable`, `/notifications`
 - Teacher: `/`, `/teacher/attendance`, `/teacher/analytics`, `/timetable`
-- Admin: `/`, `/admin/students`, `/admin/notifications`
+- Admin: `/`, `/admin/students`, `/admin/teachers`, `/admin/notifications`
+
+After seeding, students and teachers are spread across **semesters 1, 3, 5, and 7**. Use the semester filter on the admin Students and Teachers pages to browse each cohort.
 
 ## Common Troubleshooting
 
