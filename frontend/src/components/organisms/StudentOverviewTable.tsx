@@ -9,9 +9,10 @@ export type StudentTableRow = {
   subjectName: string;
   subjectCode: string;
   total: number;
-  present: number;
-  absent: number;
+  statusType: 'present' | 'absent';
+  count: number;
   isFirstOfStudent: boolean;
+  isFirstOfSubject: boolean;
 };
 
 type StudentOverviewTableProps = {
@@ -33,8 +34,8 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Section</th>
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Subject</th>
               <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Total</th>
-              <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Present</th>
-              <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Absent</th>
+              <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Attendance</th>
+              <th className="px-6 py-4 text-label-md text-outline uppercase tracking-wider">Count</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant/10">
@@ -50,7 +51,7 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
                   key={row.rowKey}
                   className={`hover:bg-primary/5 transition-colors ${
                     row.isFirstOfStudent ? 'bg-surface-container-low/30' : ''
-                  }`}
+                  } ${row.statusType === 'absent' ? 'bg-surface-container-low/10' : ''}`}
                 >
                   <td className="px-6 py-3 text-body-sm font-medium text-on-surface">
                     {row.isFirstOfStudent ? row.uniNo : ''}
@@ -65,18 +66,38 @@ export function StudentOverviewTable({ rows, onDownload, downloading }: StudentO
                     {row.isFirstOfStudent ? row.section : ''}
                   </td>
                   <td className="px-6 py-3">
-                    <p className="text-body-sm font-medium text-on-surface">{row.subjectName}</p>
-                    <p className="text-label-md text-outline">{row.subjectCode}</p>
+                    {row.isFirstOfSubject ? (
+                      <>
+                        <p className="text-body-sm font-medium text-on-surface">{row.subjectName}</p>
+                        <p className="text-label-md text-outline">{row.subjectCode}</p>
+                      </>
+                    ) : null}
                   </td>
-                  <td className="px-6 py-3 text-body-sm text-on-surface">{row.total}</td>
+                  <td className="px-6 py-3 text-body-sm text-on-surface">
+                    {row.isFirstOfSubject ? row.total : ''}
+                  </td>
                   <td className="px-6 py-3">
-                    <span className="inline-flex items-center gap-1 text-green-700 font-bold text-body-sm">
-                      {row.present}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-md font-bold ${
+                        row.statusType === 'present'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-error-container/40 text-error'
+                      }`}
+                    >
+                      <MaterialIcon
+                        name={row.statusType === 'present' ? 'check_circle' : 'cancel'}
+                        size="sm"
+                      />
+                      {row.statusType === 'present' ? 'Present' : 'Absent'}
                     </span>
                   </td>
                   <td className="px-6 py-3">
-                    <span className="inline-flex items-center gap-1 text-error font-bold text-body-sm">
-                      {row.absent}
+                    <span
+                      className={`font-bold text-body-sm ${
+                        row.statusType === 'present' ? 'text-green-700' : 'text-error'
+                      }`}
+                    >
+                      {row.count}
                     </span>
                   </td>
                 </tr>

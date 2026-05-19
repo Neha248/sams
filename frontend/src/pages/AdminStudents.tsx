@@ -52,9 +52,10 @@ function buildTableRows(students: StudentOverview[]): StudentTableRow[] {
             },
           ];
 
-    subjectList.forEach((sub, idx) => {
+    subjectList.forEach((sub, subjectIdx) => {
+      const isFirstSubject = subjectIdx === 0;
       rows.push({
-        rowKey: `${student.profileId}-${sub.subjectId}`,
+        rowKey: `${student.profileId}-${sub.subjectId}-present`,
         uniNo: student.uniNo,
         name: student.name,
         semester: student.semester,
@@ -62,9 +63,24 @@ function buildTableRows(students: StudentOverview[]): StudentTableRow[] {
         subjectName: sub.subjectName,
         subjectCode: sub.subjectCode,
         total: sub.total,
-        present: sub.present,
-        absent: sub.absent,
-        isFirstOfStudent: idx === 0,
+        statusType: 'present',
+        count: sub.present,
+        isFirstOfStudent: isFirstSubject,
+        isFirstOfSubject: true,
+      });
+      rows.push({
+        rowKey: `${student.profileId}-${sub.subjectId}-absent`,
+        uniNo: student.uniNo,
+        name: student.name,
+        semester: student.semester,
+        section: student.section,
+        subjectName: sub.subjectName,
+        subjectCode: sub.subjectCode,
+        total: sub.total,
+        statusType: 'absent',
+        count: sub.absent,
+        isFirstOfStudent: false,
+        isFirstOfSubject: false,
       });
     });
   }
