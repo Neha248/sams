@@ -8,7 +8,7 @@ import { logger } from './utils/logger';
 const envPath = path.resolve(process.cwd(), '.env');
 dotenv.config({ path: envPath });
 
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = Number(process.env.PORT) || 5001;
 
 const start = async () => {
   await connectDB();
@@ -41,11 +41,12 @@ const start = async () => {
   } catch (err) {
     const error = err as NodeJS.ErrnoException;
     if (error.code === 'EADDRINUSE') {
-      ({ server, activePort } = await listenOnPort(0));
-      logger.warn(`Port ${PORT} is already in use. Started on fallback port ${activePort}.`);
-    } else {
-      throw err;
+      logger.error(
+        `Port ${PORT} is already in use. Run: .\\scripts\\free-port.ps1 (from project root) or stop the other Node process. Docker backend uses port 5000; local npm dev should use 5001 — see backend/.env PORT.`
+      );
+      process.exit(1);
     }
+    throw err;
   }
 
   logger.info(`🚀 SAMS Backend running on http://localhost:${activePort}`);

@@ -3,65 +3,83 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 226 41% 9%; /* navy-900 */
-    --foreground: 210 40% 98%;
-
-    --card: 227 34% 14%; /* navy-800 */
-    --card-foreground: 210 40% 98%;
-
-    --popover: 227 34% 14%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 190 100% 50%; /* neon-blue */
-    --primary-foreground: 227 34% 10%;
-
-    --secondary: 224 35% 20%; /* navy-700 */
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 224 35% 20%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 348 100% 64%; /* neon-crimson */
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 224 35% 25%;
-    --input: 224 35% 20%;
-    --ring: 190 100% 50%;
-
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 226 41% 9%;
-    --foreground: 210 40% 98%;
-    /* Same as root because default is dark mode for this app */
-  }
-}
-
-@layer base {
   body {
-    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(circle at top right, #f0f4ff, #f8f9ff 50%);
+    min-height: 100vh;
+    color: #0b1c30;
+  }
+
+  body.theme-neo-shinjuku {
+    @apply bg-navy-900 text-slate-100;
+    background: #0e1322;
   }
 }
 
-.glass-panel {
-  @apply bg-navy-800/80 backdrop-blur-md border border-white/5 shadow-[0_0_15px_rgba(0,0,0,0.5)];
-}
+@layer components {
+  .glass-card {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 24px -1px rgba(0, 35, 111, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
 
-.glow-blue {
-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.7);
-}
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  }
 
-.glow-crimson {
-  text-shadow: 0 0 10px rgba(255, 75, 110, 0.7);
-}
+  .ghost-icon {
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    font-size: 80px;
+    opacity: 0.04;
+    transform: rotate(-15deg);
+    pointer-events: none;
+  }
 
-.border-glow-blue {
-  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3), 0 0 10px rgba(0, 212, 255, 0.1);
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 35, 111, 0.1);
+    border-radius: 10px;
+  }
+
+  .font-display-lg {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .font-headline-md,
+  .font-title-lg {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Neo-Shinjuku legacy */
+  .glass-panel {
+    @apply bg-navy-800/80 backdrop-blur-md border border-white/5 shadow-[0_0_15px_rgba(0,0,0,0.5)];
+  }
+
+  .glow-blue {
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.7);
+  }
+
+  .border-glow-blue {
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3), 0 0 10px rgba(0, 212, 255, 0.1);
+  }
 }
 
 @keyframes fadeIn {

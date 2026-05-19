@@ -1,0 +1,38 @@
+/** Design tokens from Stitch project 15144969386023659098 — "Academic Intelligence" */
+export const stitchColors = {
+  background: '#f8f9ff',
+  surface: '#f8f9ff',
+  'surface-dim': '#cbdbf5',
+  'surface-container-lowest': '#ffffff',
+  'surface-container-low': '#eff4ff',
+  'surface-container': '#e5eeff',
+  'surface-container-high': '#dce9ff',
+  'surface-container-highest': '#d3e4fe',
+  'on-surface': '#0b1c30',
+  'on-surface-variant': '#444651',
+  'on-background': '#0b1c30',
+  outline: '#757682',
+  'outline-variant': '#c5c5d3',
+  primary: '#00236f',
+  'primary-container': '#1e3a8a',
+  'on-primary': '#ffffff',
+  'on-primary-container': '#90a8ff',
+  secondary: '#0058be',
+  'secondary-container': '#2170e4',
+  'on-secondary': '#ffffff',
+  'on-secondary-container': '#fefcff',
+  'secondary-fixed': '#d8e2ff',
+  tertiary: '#222a3e',
+  'tertiary-container': '#384055',
+  'on-tertiary': '#ffffff',
+  'on-tertiary-container': '#a4acc5',
+  error: '#ba1a1a',
+} as const;
+
+export const stitchSpacing = {
+  unit: '8px',
+  gutter: '24px',
+  'navbar-height': '72px',
+  'container-margin': '32px',
+  'sidebar-width': '280px',
+} as const;

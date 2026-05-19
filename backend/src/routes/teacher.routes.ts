@@ -8,6 +8,7 @@ import {
   getTeacherAnalytics,
   getStudentList,
   downloadTeacherReportPDF,
+  getTeacherNotifications,
   getAttendanceDepartments,
   getAttendanceSections,
   getAttendanceSemesters,
@@ -30,6 +31,7 @@ router.post('/attendance/mark', markAttendance);
 router.get('/analytics', getTeacherAnalytics);
 router.get('/students', getStudentList);
 router.get('/report/pdf', downloadTeacherReportPDF);
+router.get('/notifications', getTeacherNotifications);
 
 router.get('/attendance/departments', getAttendanceDepartments);
 router.get('/attendance/sections', getAttendanceSections);

@@ -6,6 +6,7 @@ import TeacherProfile from '../models/TeacherProfile.model';
 import Timetable from '../models/Timetable.model';
 import StudentProfile from '../models/StudentProfile.model';
 import User from '../models/User.model';
+import Notification from '../models/Notification.model';
 import { markAttendanceSchema } from '../validators/attendance.validator';
 import { generateTeacherPDF } from '../services/pdf.service';
 import { sendSuccess, sendError } from '../utils/response';
@@ -255,6 +256,24 @@ export const downloadTeacherReportPDF = async (req: AuthRequest, res: Response):
   }
 };
 
+// GET /api/teacher/notifications
+export const getTeacherNotifications = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    const notifications = await Notification.find({
+      $or: [{ targetType: 'all' }, { targetType: 'teacher', targetId: userId }],
+      isDraft: false,
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const enriched = notifications.map((n) => ({
+      ...n.toObject(),
+      isRead: n.readBy.map(String).includes(userId),
+    }));
+
+    sendSuccess(res, enriched);
 // GET /api/teacher/dashboard/overview
 export const getTeacherDashboardOverview = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

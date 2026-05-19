@@ -1,0 +1,14 @@
+# MongoDB only — for local dev (backend + frontend via npm run dev)
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: attendance-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+    driver: local

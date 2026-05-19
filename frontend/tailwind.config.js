@@ -1,102 +1,75 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ["class"],
-  content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-  ],
-  prefix: "",
+  darkMode: ['class'],
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-        },
-        // Neo-Shinjuku Night specific colors
-        navy: {
-          900: '#0e1322',
-          800: '#161d30',
-          700: '#1e2841',
-        },
-        neon: {
-          blue: '#00D4FF',
-          crimson: '#FF4B6E',
-          cyan: '#00ffff',
-        }
+        background: '#f8f9ff',
+        'surface-container-lowest': '#ffffff',
+        'on-secondary': '#ffffff',
+        'inverse-primary': '#b6c4ff',
+        'tertiary-container': '#384055',
+        'secondary-container': '#2170e4',
+        'on-tertiary-container': '#a4acc5',
+        'on-primary-container': '#90a8ff',
+        'surface-container-low': '#eff4ff',
+        'on-surface': '#0b1c30',
+        tertiary: '#222a3e',
+        'on-background': '#0b1c30',
+        'secondary-fixed': '#d8e2ff',
+        'on-error': '#ffffff',
+        'inverse-surface': '#213145',
+        'outline-variant': '#c5c5d3',
+        'surface-container-highest': '#d3e4fe',
+        'surface-tint': '#4059aa',
+        'primary-container': '#1e3a8a',
+        surface: '#f8f9ff',
+        primary: '#00236f',
+        secondary: '#0058be',
+        'surface-dim': '#cbdbf5',
+        outline: '#757682',
+        'surface-variant': '#d3e4fe',
+        'surface-container': '#e5eeff',
+        'on-tertiary': '#ffffff',
+        'surface-container-high': '#dce9ff',
+        'on-surface-variant': '#444651',
+        'error-container': '#ffdad6',
+        error: '#ba1a1a',
+        'on-primary': '#ffffff',
+        'on-secondary-container': '#fefcff',
+        'surface-bright': '#f8f9ff',
+        'inverse-on-surface': '#eaf1ff',
+        // Legacy Neo-Shinjuku (student/teacher layouts)
+        navy: { 900: '#0e1322', 800: '#161d30', 700: '#1e2841' },
+        neon: { blue: '#00D4FF', crimson: '#FF4B6E', cyan: '#00ffff' },
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        "pulse-glow": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        }
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "pulse-glow": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      spacing: {
+        gutter: '24px',
+        'navbar-height': '72px',
+        'container-margin': '32px',
+        'sidebar-width': '280px',
+        unit: '8px',
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-      }
+        outfit: ['Outfit', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
+      },
+      fontSize: {
+        'display-lg': ['48px', { lineHeight: '56px', fontWeight: '700', letterSpacing: '-0.02em' }],
+        'display-lg-mobile': ['32px', { lineHeight: '40px', fontWeight: '700', letterSpacing: '-0.02em' }],
+        'headline-md': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+        'title-lg': ['20px', { lineHeight: '28px', fontWeight: '500' }],
+        'body-md': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+        'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+        'label-md': ['12px', { lineHeight: '16px', fontWeight: '600', letterSpacing: '0.05em' }],
+      },
+      borderRadius: {
+        lg: '0.5rem',
+        xl: '0.75rem',
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-}
+  plugins: [require('tailwindcss-animate')],
+};

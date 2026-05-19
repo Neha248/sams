@@ -9,8 +9,22 @@ import Subject from '../models/Subject.model';
 import Timetable from '../models/Timetable.model';
 import Attendance from '../models/Attendance.model';
 import Notification from '../models/Notification.model';
-import { createTimetableSchema } from '../validators/timetable.validator';
+import {
+  createTimetableSchema,
+  publishTimetableSchema,
+  updateTimetableSchema,
+} from '../validators/timetable.validator';
+import { getTimetableOverview } from '../services/adminTimetable.service';
+import { sendNotificationSchema } from '../validators/notification.validator';
+import { createStudentSchema } from '../validators/admin.validator';
 import { sendSuccess, sendError } from '../utils/response';
+import { getFacultySubjectAttendanceByDepartment } from '../services/adminAttendance.service';
+import {
+  buildStudentAttendanceCsv,
+  getStudentAttendanceOverview,
+} from '../services/adminStudent.service';
+import { getTeacherAssignmentsOverview } from '../services/adminTeacher.service';
+import { createTeacherSchema } from '../validators/admin.validator';
 
 // GET /api/admin/dashboard
 export const getAdminDashboard = async (_req: Request, res: Response): Promise<void> => {
@@ -45,10 +59,38 @@ export const getAdminDashboard = async (_req: Request, res: Response): Promise<v
 // POST /api/admin/student/create
 export const createStudent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { fullName, userId, email, password, rollNumber, departmentId, semester, section, phone } = req.body;
+    const parsed = createStudentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, parsed.error.errors[0]?.message ?? 'Validation failed', 422);
+      return;
+    }
+    const { fullName, userId, email, password, rollNumber, departmentId, semester, section, phone } =
+      parsed.data;
+
+    const existing = await User.findOne({ $or: [{ userId }, { email }] });
+    if (existing) {
+      sendError(res, 'User ID or email already exists', 409);
+      return;
+    }
+
     const user = await User.create({ fullName, userId, email, password, role: 'student' });
-    const profile = await StudentProfile.create({ userId: user._id, rollNumber, departmentId, semester, section, phone });
-    sendSuccess(res, { user: { id: user._id, userId: user.userId, fullName: user.fullName, role: user.role }, profile }, 'Student created', 201);
+    const profile = await StudentProfile.create({
+      userId: user._id,
+      rollNumber,
+      departmentId,
+      semester,
+      section,
+      phone,
+    });
+    sendSuccess(
+      res,
+      {
+        user: { id: user._id, userId: user.userId, fullName: user.fullName, role: user.role },
+        profile,
+      },
+      'Student created',
+      201
+    );
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -57,10 +99,53 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
 // POST /api/admin/teacher/create
 export const createTeacher = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { fullName, userId, email, password, employeeId, departments, subjects, phone } = req.body;
+    const parsed = createTeacherSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const { fullName, userId, email, password, employeeId, departments, subjects, phone } = parsed.data;
+
+    const existing = await User.findOne({ $or: [{ userId }, { email }] });
+    if (existing) {
+      sendError(res, 'User ID or email already exists', 409);
+      return;
+    }
+
     const user = await User.create({ fullName, userId, email, password, role: 'teacher' });
-    const profile = await TeacherProfile.create({ userId: user._id, employeeId, departments, subjects, phone });
-    sendSuccess(res, { user: { id: user._id, userId: user.userId, fullName: user.fullName }, profile }, 'Teacher created', 201);
+    const profile = await TeacherProfile.create({
+      userId: user._id,
+      employeeId,
+      departments,
+      subjects,
+      phone,
+    });
+    sendSuccess(
+      res,
+      { user: { id: user._id, userId: user.userId, fullName: user.fullName }, profile },
+      'Teacher created',
+      201
+    );
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/subjects?departmentId=
+export const getSubjectsByDepartment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester } = req.query;
+    if (!departmentId || typeof departmentId !== 'string') {
+      sendError(res, 'departmentId query parameter is required', 400);
+      return;
+    }
+    const filter: Record<string, unknown> = { departmentId };
+    if (typeof semester === 'string' && semester !== '') {
+      const semesterNum = Number(semester);
+      if (!Number.isNaN(semesterNum)) filter.semester = semesterNum;
+    }
+    const subjects = await Subject.find(filter).select('name code semester credits').sort({ semester: 1, code: 1 });
+    sendSuccess(res, subjects);
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -86,6 +171,24 @@ export const createSubject = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// GET /api/admin/timetable/overview
+export const getTimetableOverviewHandler = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, section, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getTimetableOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      section: typeof section === 'string' && section ? section : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
 // POST /api/admin/timetable/create
 export const createTimetable = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -98,12 +201,56 @@ export const createTimetable = async (req: Request, res: Response): Promise<void
   }
 };
 
-// PUT /api/admin/timetable/:id/publish
+// PUT /api/admin/timetable/:id
+export const updateTimetable = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const parsed = updateTimetableSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const entry = await Timetable.findByIdAndUpdate(req.params.id, parsed.data, {
+      new: true,
+      runValidators: true,
+    });
+    if (!entry) {
+      sendError(res, 'Timetable slot not found', 404);
+      return;
+    }
+    sendSuccess(res, entry, 'Timetable entry updated');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// DELETE /api/admin/timetable/:id
+export const deleteTimetable = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const entry = await Timetable.findByIdAndDelete(req.params.id);
+    if (!entry) {
+      sendError(res, 'Timetable slot not found', 404);
+      return;
+    }
+    sendSuccess(res, null, 'Timetable entry removed');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// PUT /api/admin/timetable/publish
 export const publishTimetable = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { departmentId, semester, section } = req.query;
-    await Timetable.updateMany({ departmentId, semester, section }, { isPublished: true });
-    sendSuccess(res, null, 'Timetable published');
+    const parsed = publishTimetableSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const { departmentId, semester, section } = parsed.data;
+    await Timetable.updateMany(
+      { departmentId, semester, section: section.toUpperCase() },
+      { isPublished: true }
+    );
+    sendSuccess(res, null, 'Timetable published for cohort');
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -112,16 +259,56 @@ export const publishTimetable = async (req: Request, res: Response): Promise<voi
 // POST /api/admin/notifications/send
 export const sendNotification = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, message, priority, targetType, targetId, scheduledAt } = req.body;
+    const parsed = sendNotificationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, parsed.error.errors[0]?.message ?? 'Invalid notification payload', 400);
+      return;
+    }
+
+    const { title, message, priority, targetType, targetId } = parsed.data;
+
+    if (targetType !== 'all') {
+      const user = await User.findById(targetId);
+      if (!user || !user.isActive) {
+        sendError(res, 'Recipient not found', 404);
+        return;
+      }
+      if (targetType === 'student' && user.role !== 'student') {
+        sendError(res, 'Selected user is not a student', 400);
+        return;
+      }
+      if (targetType === 'teacher' && user.role !== 'teacher') {
+        sendError(res, 'Selected user is not a teacher', 400);
+        return;
+      }
+    }
+
     const notification = await Notification.create({
-      title, message, priority, targetType,
-      targetId: targetId ? new mongoose.Types.ObjectId(targetId) : undefined,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
-      sentAt: scheduledAt ? undefined : new Date(),
+      title,
+      message,
+      priority,
+      targetType,
+      targetId: targetType === 'all' ? undefined : new mongoose.Types.ObjectId(targetId),
+      sentAt: new Date(),
       createdBy: req.user!.id,
       isDraft: false,
     });
     sendSuccess(res, notification, 'Notification sent', 201);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/faculty-attendance?departmentId=
+export const getFacultySubjectAttendance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId } = req.query;
+    if (!departmentId || typeof departmentId !== 'string') {
+      sendError(res, 'departmentId query parameter is required', 400);
+      return;
+    }
+    const rows = await getFacultySubjectAttendanceByDepartment(departmentId);
+    sendSuccess(res, rows);
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -184,6 +371,61 @@ export const getAdminAnalytics = async (req: Request, res: Response): Promise<vo
   }
 };
 
+// GET /api/admin/students/overview?departmentId=&semester=&search=
+export const getStudentsAttendanceOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getStudentAttendanceOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/teachers/overview?departmentId=&semester=&search=
+export const getTeachersAssignmentsOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getTeacherAssignmentsOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/students/export?departmentId=&search=
+export const exportStudentsAttendance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, semester, search } = req.query;
+    const semesterNum =
+      typeof semester === 'string' && semester !== '' ? Number(semester) : undefined;
+    const result = await getStudentAttendanceOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      semester: semesterNum !== undefined && !Number.isNaN(semesterNum) ? semesterNum : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    const csv = buildStudentAttendanceCsv(result.exportRows);
+    const filename = `sams_students_attendance_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
 // GET /api/admin/students
 export const getAllStudents = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -212,6 +454,29 @@ export const deleteStudent = async (req: Request, res: Response): Promise<void> 
     const user = await User.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
     if (!user) { sendError(res, 'Student not found', 404); return; }
     sendSuccess(res, null, 'Student deactivated');
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// DELETE /api/admin/teacher/:profileId — soft-deactivate teacher user account
+export const deleteTeacher = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const profile = await TeacherProfile.findById(req.params.profileId);
+    if (!profile) {
+      sendError(res, 'Teacher not found', 404);
+      return;
+    }
+    const user = await User.findByIdAndUpdate(
+      profile.userId,
+      { isActive: false },
+      { new: true }
+    );
+    if (!user || user.role !== 'teacher') {
+      sendError(res, 'Teacher user not found', 404);
+      return;
+    }
+    sendSuccess(res, null, 'Teacher removed successfully');
   } catch (err) {
     sendError(res, (err as Error).message);
   }

@@ -132,9 +132,9 @@ npm install
 Create `backend/.env`:
 
 ```env
-PORT=5000
+PORT=5001
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/attendance_system
+MONGO_URI=mongodb://127.0.0.1:27017/attendance_system
 JWT_SECRET=sams_super_secret_jwt_key_2026
 JWT_EXPIRES_IN=7d
 BCRYPT_ROUNDS=12
@@ -143,9 +143,33 @@ CORS_ORIGIN=http://localhost:5173
 
 ## Run Modes
 
-### Option A: Local Development (Node + local MongoDB)
+### Option A: Local Development (Node + MongoDB)
 
-1. Start MongoDB on `localhost:27017`.
+**You need MongoDB on port 27017 before the backend will start.**
+
+#### Start MongoDB (pick one)
+
+**A) Docker (recommended)** — start **Docker Desktop**, then from project root:
+
+```powershell
+.\scripts\start-mongo.ps1
+```
+
+Or: `docker compose -f docker-compose.mongo.yml up -d`
+
+**B) MongoDB installed on Windows** — start the **MongoDB Server** service in `services.msc`.
+
+#### Free port 5001 (if local backend says port in use)
+
+```powershell
+.\scripts\free-port.ps1
+```
+
+This stops **Node only** on port **5001** (never kills Docker). Docker’s backend stays on **5000**; local `npm run dev` uses **5001** so both can run together with MongoDB in Docker.
+
+#### Run app
+
+1. Confirm MongoDB: port 27017 is listening.
 2. Start backend:
 
 ```bash
@@ -169,7 +193,7 @@ npm run seed
 
 5. Open:
    - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend health: [http://localhost:5000/health](http://localhost:5000/health)
+   - Backend health: [http://localhost:5001/health](http://localhost:5001/health)
 
 ### Option B: Docker Compose
 
@@ -222,6 +246,10 @@ Only for [http://localhost:8081](http://localhost:8081):
 ## Routes by Role
 
 - Student: `/`, `/attendance`, `/timetable`, `/notifications`
+- Teacher: `/`, `/teacher/attendance`, `/teacher/analytics`, `/timetable`
+- Admin: `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications`
+
+After seeding, students and teachers are spread across **semesters 1, 3, 5, and 7**. Use the semester filter on the admin Students and Teachers pages to browse each cohort.
 - Teacher: `/`, `/teacher/attendance`, `/teacher/analysis`, `/timetable`
 - Admin: `/`, `/admin/students`, `/admin/notifications`
 
@@ -283,7 +311,16 @@ Only for [http://localhost:8081](http://localhost:8081):
 ### API not reachable from frontend
 
 - Confirm backend is running and `/health` returns `{ status: "ok" }`.
-- In local mode, ensure frontend runs on `5173` and backend on `5000`.
+- In local mode: frontend `5173`, backend **`5001`** (see `backend/.env` and `frontend/.env.development`).
+- Vite proxies `/api` to `http://localhost:5001`. Docker full-stack backend uses **5000** — no conflict.
+- Do **not** run `.\scripts\free-port.ps1 -Port 5000` — that can break Docker. Use default `5001` only.
+
+### `/admin/timetable` shows "Route not found"
+
+- That text comes from the **backend** (API not reachable on the proxy target), not a missing React page.
+- Confirm `http://localhost:5001/health` works and restart `npm run dev` in `frontend` after changing ports.
+- Restart backend after pulling timetable changes; confirm `GET /api/admin/timetable/overview` works.
+- Log in as **admin** and open `http://localhost:5173/admin/timetable`.
 
 ## Useful Commands
 
