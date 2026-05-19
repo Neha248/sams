@@ -5,12 +5,12 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AppLayout from './components/AppLayout';
 import Attendance from './pages/Attendance';
-import Timetable from './pages/Timetable.tsx';
-import Notifications from './pages/Notifications.tsx';
-import TeacherAttendance from './pages/TeacherAttendance.tsx';
-import TeacherAnalytics from './pages/TeacherAnalytics.tsx';
-import AdminStudents from './pages/AdminStudents.tsx';
-import AdminNotifications from './pages/AdminNotifications.tsx';
+import Timetable from './pages/Timetable';
+import Notifications from './pages/Notifications';
+import TeacherAttendance from './pages/TeacherAttendance';
+import TeacherAnalytics from './pages/TeacherAnalytics';
+import AdminStudents from './pages/AdminStudents';
+import AdminNotifications from './pages/AdminNotifications';
 
 const RoleRoute = ({
   allowed,
@@ -32,7 +32,16 @@ function App() {
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       
       <Route element={user ? <AppLayout /> : <Navigate to="/login" replace />}>
-        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/"
+          element={
+            user?.role === 'teacher' ? (
+              <Navigate to="/teacher/dashboard" replace />
+            ) : (
+              <Dashboard />
+            )
+          }
+        />
         <Route
           path="/attendance"
           element={
@@ -58,6 +67,14 @@ function App() {
           }
         />
         <Route
+          path="/teacher/dashboard"
+          element={
+            <RoleRoute allowed={['teacher']}>
+              <Dashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
           path="/teacher/attendance"
           element={
             <RoleRoute allowed={['teacher']}>
@@ -66,7 +83,7 @@ function App() {
           }
         />
         <Route
-          path="/teacher/analytics"
+          path="/teacher/analysis"
           element={
             <RoleRoute allowed={['teacher']}>
               <TeacherAnalytics />

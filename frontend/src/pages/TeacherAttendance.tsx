@@ -1,120 +1,253 @@
-import { useEffect, useState } from 'react';
-import api from '../lib/axios';
+import { useState, useMemo } from 'react';
+import AttendanceFilters from '../components/attendance/AttendanceFilters';
+import AttendanceBulkBar from '../components/attendance/AttendanceBulkBar';
+import AttendanceTable from '../components/attendance/AttendanceTable';
+import AttendanceReviewModal from '../components/attendance/AttendanceReviewModal';
+import type {
+  AttendanceStatus,
+  AttendanceStudent,
+  FilterOption,
+  AttendanceChartSegment
+} from '../components/attendance/types';
 
-type StudentRow = {
-  _id: string;
-  userId?: { fullName?: string; userId?: string };
-  rollNumber?: string;
-};
+// TODO: connect attendance API
+// TODO: connect timetable collection
+// TODO: connect attendance persistence
+// TODO: connect realtime sync
 
-type MarkRow = {
-  studentId: string;
-  status: 'present' | 'absent' | 'late';
+const MOCK_DEPARTMENTS: FilterOption[] = [
+  { id: 'cse', name: 'Computer Science (CSE)' },
+  { id: 'ece', name: 'Electronics (ECE)' },
+  { id: 'me', name: 'Mechanical (ME)' }
+];
+
+const MOCK_SECTIONS: FilterOption[] = [
+  { id: 'a', name: 'Section A' },
+  { id: 'b', name: 'Section B' },
+  { id: 'c', name: 'Section C' }
+];
+
+const MOCK_SEMESTERS: FilterOption[] = [
+  { id: '5', name: 'Semester 5' },
+  { id: '6', name: 'Semester 6' },
+  { id: '7', name: 'Semester 7' }
+];
+
+const MOCK_SUBJECTS: FilterOption[] = [
+  { id: 'db', name: 'Database Systems' },
+  { id: 'os', name: 'Operating Systems' },
+  { id: 'cn', name: 'Computer Networks' }
+];
+
+const MOCK_STUDENTS: AttendanceStudent[] = [
+  {
+    studentId: 'stu-001',
+    universityRoll: '22140101',
+    classRoll: '12',
+    studentName: 'Rahul Sharma'
+  },
+  {
+    studentId: 'stu-002',
+    universityRoll: '22140102',
+    classRoll: '13',
+    studentName: 'Aman Roy'
+  },
+  {
+    studentId: 'stu-003',
+    universityRoll: '22140103',
+    classRoll: '14',
+    studentName: 'Sourav Das'
+  },
+  {
+    studentId: 'stu-004',
+    universityRoll: '22140104',
+    classRoll: '15',
+    studentName: 'Priya Sen'
+  },
+  {
+    studentId: 'stu-005',
+    universityRoll: '22140105',
+    classRoll: '16',
+    studentName: 'Akash Das'
+  },
+  {
+    studentId: 'stu-006',
+    universityRoll: '22140106',
+    classRoll: '17',
+    studentName: 'Neha Gupta'
+  }
+];
+
+const todayIso = (): string => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
 
 const TeacherAttendance = () => {
-  const [departmentId, setDepartmentId] = useState('');
-  const [semester, setSemester] = useState('');
-  const [section, setSection] = useState('');
-  const [subjectId, setSubjectId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [marks, setMarks] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [selectedDept, setSelectedDept] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
+  const [selectedSem, setSelectedSem] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [dateValue, setDateValue] = useState(todayIso);
 
-  const loadStudents = async () => {
-    setError('');
-    try {
-      const q = new URLSearchParams();
-      if (departmentId) q.append('departmentId', departmentId);
-      if (semester) q.append('semester', semester);
-      if (section) q.append('section', section);
-      const res = (await api.get(`/teacher/students?${q.toString()}`)) as {
-        data: StudentRow[];
-      };
-      setStudents(res.data || []);
-      const initial: Record<string, 'present' | 'absent' | 'late'> = {};
-      (res.data || []).forEach((s) => {
-        initial[s._id] = 'present';
-      });
-      setMarks(initial);
-    } catch (err) {
-      setError(err as string);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [students, setStudents] = useState<AttendanceStudent[]>([]);
+  const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
+  const [rosterLoaded, setRosterLoaded] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  const handleFetchStudents = () => {
+    if (!selectedDept || !selectedSection || !selectedSem || !selectedSubject) {
+      setError('Please select department, section, semester, and subject before fetching.');
+      return;
     }
+
+    setError(null);
+    setLoading(true);
+    setRosterLoaded(false);
+
+    // Mock fetch — no API / database
+    window.setTimeout(() => {
+      const roster = MOCK_STUDENTS.map((s) => ({ ...s }));
+      const initial: Record<string, AttendanceStatus> = {};
+
+      roster.forEach((student, index) => {
+        if (index === 1) initial[student.studentId] = 'absent';
+        else if (index === 2) initial[student.studentId] = 'late';
+        else initial[student.studentId] = 'present';
+      });
+
+      setStudents(roster);
+      setAttendanceData(initial);
+      setRosterLoaded(true);
+      setLoading(false);
+    }, 600);
   };
 
-  useEffect(() => {
-    if (departmentId || semester || section) {
-      void loadStudents();
-    }
-  }, [departmentId, semester, section]);
+  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+    setAttendanceData((prev) => ({ ...prev, [studentId]: status }));
+  };
 
-  const submit = async () => {
-    setMessage('');
-    setError('');
-    try {
-      const payload: { students: MarkRow[]; date: string; subjectId: string } = {
-        students: students.map((s) => ({ studentId: s._id, status: marks[s._id] || 'present' })),
-        date,
-        subjectId,
-      };
-      await api.post('/teacher/attendance/mark', payload);
-      setMessage('Attendance saved successfully.');
-    } catch (err) {
-      setError(err as string);
+  const handleBulkUpdate = (status: AttendanceStatus) => {
+    const updated: Record<string, AttendanceStatus> = {};
+    students.forEach((s) => {
+      updated[s.studentId] = status;
+    });
+    setAttendanceData(updated);
+  };
+
+  const grouped = useMemo(() => {
+    const present: AttendanceStudent[] = [];
+    const absent: AttendanceStudent[] = [];
+    const late: AttendanceStudent[] = [];
+
+    students.forEach((s) => {
+      const status = attendanceData[s.studentId] ?? 'present';
+      if (status === 'present') present.push(s);
+      else if (status === 'absent') absent.push(s);
+      else late.push(s);
+    });
+
+    return { present, absent, late };
+  }, [students, attendanceData]);
+
+  const chartData: AttendanceChartSegment[] = useMemo(
+    () =>
+      [
+        { name: 'Present', value: grouped.present.length, color: '#10b981' },
+        { name: 'Absent', value: grouped.absent.length, color: '#f43f5e' },
+        { name: 'Late', value: grouped.late.length, color: '#f59e0b' }
+      ].filter((d) => d.value > 0),
+    [grouped]
+  );
+
+  const handleSubmit = () => {
+    if (students.length === 0) return;
+    const unresolved = students.some((s) => !attendanceData[s.studentId]);
+    if (unresolved) {
+      setError('Assign a status to every student before submitting.');
+      return;
     }
+    setError(null);
+    setShowReviewModal(true);
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Mark Attendance</h1>
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-8">
+      <header className="space-y-2">
+        <h1 className="text-3xl md:text-4xl font-bold text-white tracking-[0.12em]">
+          MARK ATTENDANCE
+        </h1>
+        <p className="text-slate-400 text-sm md:text-base max-w-2xl">
+          Select class filters and mark student attendance
+        </p>
+      </header>
 
-      <div className="glass-panel rounded-xl border border-white/10 p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input className="bg-navy-800 border border-white/10 rounded px-3 py-2" placeholder="Department ID" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} />
-        <input className="bg-navy-800 border border-white/10 rounded px-3 py-2" placeholder="Semester" value={semester} onChange={(e) => setSemester(e.target.value)} />
-        <input className="bg-navy-800 border border-white/10 rounded px-3 py-2" placeholder="Section" value={section} onChange={(e) => setSection(e.target.value)} />
-        <input className="bg-navy-800 border border-white/10 rounded px-3 py-2" placeholder="Subject ID" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} />
-        <input type="date" className="bg-navy-800 border border-white/10 rounded px-3 py-2" value={date} onChange={(e) => setDate(e.target.value)} />
-      </div>
+      <AttendanceFilters
+        departments={MOCK_DEPARTMENTS}
+        sections={MOCK_SECTIONS}
+        semesters={MOCK_SEMESTERS}
+        subjects={MOCK_SUBJECTS}
+        selectedDept={selectedDept}
+        selectedSection={selectedSection}
+        selectedSem={selectedSem}
+        selectedSubject={selectedSubject}
+        dateValue={dateValue}
+        loading={loading}
+        error={error}
+        onDeptChange={setSelectedDept}
+        onSectionChange={setSelectedSection}
+        onSemChange={setSelectedSem}
+        onSubjectChange={setSelectedSubject}
+        onDateChange={setDateValue}
+        onFetch={handleFetchStudents}
+      />
 
-      {error && <div className="text-neon-crimson">{error}</div>}
-      {message && <div className="text-neon-blue">{message}</div>}
+      {loading && !rosterLoaded && (
+        <div className="glass-panel rounded-2xl p-6 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-12 rounded-xl bg-slate-800/60 animate-pulse" />
+          ))}
+        </div>
+      )}
 
-      <div className="glass-panel rounded-xl overflow-hidden border border-white/10">
-        <table className="w-full text-left">
-          <thead className="bg-white/5 text-slate-300 text-sm">
-            <tr>
-              <th className="px-4 py-3">Roll</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s._id} className="border-t border-white/5">
-                <td className="px-4 py-3">{s.rollNumber || '-'}</td>
-                <td className="px-4 py-3">{s.userId?.fullName || s.userId?.userId || '-'}</td>
-                <td className="px-4 py-3">
-                  <select
-                    className="bg-navy-800 border border-white/10 rounded px-2 py-1"
-                    value={marks[s._id] || 'present'}
-                    onChange={(e) => setMarks((prev) => ({ ...prev, [s._id]: e.target.value as 'present' | 'absent' | 'late' }))}
-                  >
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                    <option value="late">Late</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {rosterLoaded && students.length > 0 && (
+        <>
+          <AttendanceBulkBar onBulkUpdate={handleBulkUpdate} />
 
-      <button onClick={submit} className="px-4 py-2 bg-neon-blue text-navy-900 rounded font-semibold">
-        Save Attendance
-      </button>
+          <AttendanceTable
+            students={students}
+            attendanceData={attendanceData}
+            onStatusChange={handleStatusChange}
+          />
+
+          <section className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="px-10 py-3.5 rounded-xl font-bold text-navy-900 bg-neon-blue
+                shadow-[0_0_24px_rgba(0,212,255,0.45)] hover:shadow-[0_0_32px_rgba(0,212,255,0.6)]
+                hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            >
+              SUBMIT ATTENDANCE
+            </button>
+          </section>
+        </>
+      )}
+
+      <AttendanceReviewModal
+        open={showReviewModal}
+        present={grouped.present}
+        absent={grouped.absent}
+        late={grouped.late}
+        chartData={chartData}
+        onClose={() => setShowReviewModal(false)}
+      />
     </div>
   );
 };

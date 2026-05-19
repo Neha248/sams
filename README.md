@@ -2,6 +2,17 @@
 
 Full-stack attendance platform for Admin, Teacher, and Student workflows.
 
+## Teacher Module (V2)
+
+```text
+Teacher
+├── Dashboard         — Readonly schedule terminal
+├── Mark Attendance   — Attendance marking workflow (frontend staging)
+└── Analysis Console  — Readonly extraction & analytics (`/teacher/analysis`)
+```
+
+**Theme:** Neo-Shinjuku Night — dark navy, glassmorphism, neon cyan accents.
+
 ## Tech Stack
 
 - Frontend: React 18, Vite, TypeScript, Tailwind CSS, Zustand, Axios, React Router
@@ -58,7 +69,18 @@ SAMS-update/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── AppLayout.tsx
+│   │   │   ├── AppLayout.tsx
+│   │   │   ├── attendance/
+│   │   │   │   ├── AttendanceFilters.tsx
+│   │   │   │   ├── AttendanceTable.tsx
+│   │   │   │   ├── AttendanceReviewModal.tsx
+│   │   │   │   └── AttendanceSummaryChart.tsx
+│   │   │   └── analytics/
+│   │   │       ├── AnalyticsFilters.tsx
+│   │   │       ├── AnalyticsTable.tsx
+│   │   │       ├── AttendanceOverviewChart.tsx
+│   │   │       ├── StudentTrendChart.tsx
+│   │   │       └── ExportPanel.tsx
 │   │   ├── lib/
 │   │   │   ├── axios.ts
 │   │   │   └── utils.ts
@@ -200,8 +222,49 @@ Only for [http://localhost:8081](http://localhost:8081):
 ## Routes by Role
 
 - Student: `/`, `/attendance`, `/timetable`, `/notifications`
-- Teacher: `/`, `/teacher/attendance`, `/teacher/analytics`, `/timetable`
+- Teacher: `/`, `/teacher/attendance`, `/teacher/analysis`, `/timetable`
 - Admin: `/`, `/admin/students`, `/admin/notifications`
+
+## Teacher Analysis Console
+
+**Route:** `/teacher/analysis`  
+**Page:** `frontend/src/pages/TeacherAnalytics.tsx`
+
+**Purpose:** Attendance extraction and visualization terminal (readonly).
+
+### Features
+
+- Department, semester, section, and subject filters
+- Student search with roll-number identity resolution
+- Status filtering (Present / Absent / Late, multi-select)
+- Attendance extraction results table (search + pagination)
+- Cohort analytics and student-level trend visualization
+- CSV export (frontend-only)
+
+### Analytics Modes
+
+| Mode | Condition | Charts |
+| :--- | :--- | :--- |
+| **All students** | Student search empty | Present vs Absent (pie) |
+| **Single student** | Name + university roll or class roll | Present vs Absent (pie) + attendance trend (line: Present / Absent / Late over date) |
+
+### Tech
+
+- Recharts, React, TypeScript
+- Glassmorphism UI, Neo-Shinjuku theme
+
+### Current State
+
+- **READ ONLY** — frontend analytics and mock/read staging only
+- No DB mutation from this screen
+- No backend PDF report generation yet
+
+### Future
+
+- PDF export (`pdf.service.ts`)
+- Attendance aggregation pipelines
+- Historical trends from live `GET /teacher/analytics`
+- Realtime analytics (deferred)
 
 ## Common Troubleshooting
 

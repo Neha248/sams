@@ -9,6 +9,37 @@ import User from '../models/User.model';
 import { markAttendanceSchema } from '../validators/attendance.validator';
 import { generateTeacherPDF } from '../services/pdf.service';
 import { sendSuccess, sendError } from '../utils/response';
+import {
+  getTeacherDashboardOverviewService,
+  getTeacherDashboardClassesService,
+  getAttendanceDepartmentsService,
+  getAttendanceSectionsService,
+  getAttendanceSemestersService,
+  getAttendanceSubjectsService
+} from '../services/teacher.service';
+import { getAttendanceStudentListService, submitAttendanceService } from '../services/attendance.service';
+
+// POST /api/teacher/attendance/submit
+export const submitAttendance = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const payload = req.body;
+    const data = await submitAttendanceService(payload);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// POST /api/teacher/attendance/students
+export const getAttendanceStudentList = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const filters = req.body;
+    const data = await getAttendanceStudentListService(filters);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
 
 // GET /api/teacher/dashboard
 export const getTeacherDashboard = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -219,6 +250,68 @@ export const downloadTeacherReportPDF = async (req: AuthRequest, res: Response):
       },
       res
     );
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/dashboard/overview
+export const getTeacherDashboardOverview = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const teacherId = req.user!.id;
+    const data = await getTeacherDashboardOverviewService(teacherId);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/dashboard/classes
+export const getTeacherDashboardClasses = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const teacherId = req.user!.id;
+    const data = await getTeacherDashboardClassesService(teacherId);
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/attendance/departments
+export const getAttendanceDepartments = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const data = await getAttendanceDepartmentsService();
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/attendance/sections
+export const getAttendanceSections = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const data = await getAttendanceSectionsService();
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/attendance/semesters
+export const getAttendanceSemesters = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const data = await getAttendanceSemestersService();
+    sendSuccess(res, data);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/teacher/attendance/subjects
+export const getAttendanceSubjects = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const data = await getAttendanceSubjectsService();
+    sendSuccess(res, data);
   } catch (err) {
     sendError(res, (err as Error).message);
   }
