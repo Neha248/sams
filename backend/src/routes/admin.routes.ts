@@ -4,6 +4,10 @@ import {
   createDepartment, createSubject, createTimetable,
   publishTimetable, sendNotification, getAdminAnalytics,
   getAllStudents, deleteStudent, getAllTeachers, getAllDepartments,
+  getFacultySubjectAttendance,
+  getSubjectsByDepartment,
+  getStudentsAttendanceOverview,
+  exportStudentsAttendance,
 } from '../controllers/admin.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { authorizeRoles } from '../middlewares/role.middleware';
@@ -14,7 +18,11 @@ router.use(authenticate, authorizeRoles('admin'));
 
 router.get('/dashboard', getAdminDashboard);
 router.get('/analytics', getAdminAnalytics);
+router.get('/faculty-attendance', getFacultySubjectAttendance);
+router.get('/subjects', getSubjectsByDepartment);
 
+router.get('/students/overview', getStudentsAttendanceOverview);
+router.get('/students/export', exportStudentsAttendance);
 router.get('/students', getAllStudents);
 router.post('/student/create', createStudent);
 router.delete('/student/:id', deleteStudent);

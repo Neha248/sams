@@ -1157,3 +1157,134 @@ This section provides an immediate high-level summary of implemented features ve
 - **Architecture:** Node.js/Express (Backend) + React/Vite (Frontend) + MongoDB. Connected via REST API and JWT Auth.
 - **Rules:** Strict TypeScript, Zod validations, distinct separation of concerns, DRY principles, NO hardcoding, adhere to the "Neo-Shinjuku Night" aesthetic.
 - **Final objective:** Produce an enterprise-grade, visually stunning, and rock-solid platform for managing institution attendance data with zero friction.
+
+---
+
+## Admin Department Dashboard (Stitch UI) — Faculty Table
+
+**Stitch project:** `15144969386023659098` — screen **SAMS - Department Dashboard**  
+**Frontend:** `frontend/src/pages/admin/DepartmentDashboard.tsx` with atomic components under `frontend/src/components/{atoms,molecules,organisms,templates}/`.
+
+### Faculty table columns (current)
+
+| Column | Description |
+| :--- | :--- |
+| **Teacher** | Full name + email from `TeacherProfile` → `User`. |
+| **Subject** | Subject name + code for the row (one row per teacher–subject pair in the selected department). |
+| **Present** | Count of attendance records with status `present` or `late` for that teacher and subject. |
+| **Absent** | Count of attendance records with status `absent` for that teacher and subject. |
+
+**Removed (not in product scope):** Workload hours/percent, star ratings.
+
+### API: faculty attendance by department
+
+- **Endpoint:** `GET /api/admin/faculty-attendance?departmentId={id}`
+- **Auth:** JWT, `admin` role only.
+- **Service:** `backend/src/services/adminAttendance.service.ts` → `getFacultySubjectAttendanceByDepartment()`
+- **Controller:** `getFacultySubjectAttendance` in `admin.controller.ts`
+- **Logic:** Aggregates `Attendance` grouped by `teacherId` + `subjectId` for subjects in the department; enriches with teacher and subject metadata. `late` counts toward **Present**.
+
+**Response shape (array item):**
+
+```json
+{
+  "teacherProfileId": "...",
+  "teacherUserId": "...",
+  "teacherName": "Dr. Sarah Jenkins",
+  "teacherEmail": "s.jenkins@sams.edu",
+  "subjectId": "...",
+  "subjectName": "Data Structures",
+  "subjectCode": "CS-301",
+  "presentCount": 42,
+  "absentCount": 8,
+  "totalRecords": 50
+}
+```
+
+### UI design note
+
+Admin routes use the **Academic Intelligence** light glass theme from Stitch (`AdminStitchLayout`), not Neo-Shinjuku Night. Student/teacher routes still use the dark Neo-Shinjuku `AppLayout`.
+
+**Removed from dashboard:** Facility Status panel (lab occupancy widget) — not part of SAMS core scope.
+
+### Assign New Teacher (faculty table)
+
+- **UI:** `AssignTeacherModal` organism — opened via **Assign New** on the faculty table (`FacultyTable` → `onAssignNew`).
+- **Endpoint:** `POST /api/admin/teacher/create`
+- **Validator:** `backend/src/validators/admin.validator.ts` → `createTeacherSchema` (Zod)
+- **Required body:**
+  ```json
+  {
+    "fullName": "Dr. Jane Smith",
+    "userId": "TCH006",
+    "email": "jane@sams.edu",
+    "password": "Teacher@123",
+    "employeeId": "EMP006",
+    "departments": ["<departmentObjectId>"],
+    "subjects": ["<subjectObjectId>"]
+  }
+  ```
+- **Subjects dropdown:** `GET /api/admin/subjects?departmentId={id}` — lists subjects for the selected department so admin can assign at least one course.
+- **After create:** Modal closes and faculty table refreshes via `GET /api/admin/faculty-attendance?departmentId={id}`.
+- **Errors:** Duplicate `userId` or `email` returns `409`; validation errors return `422`.
+
+---
+
+## Admin Students Tab — Student Details Overview
+
+**Route:** `/admin/students`  
+**Page:** `frontend/src/pages/AdminStudents.tsx`  
+**Theme:** Academic Intelligence (Stitch admin layout)
+
+### Features
+
+| Feature | Behavior |
+| :--- | :--- |
+| **Department filter** | Dropdown lists all departments plus **All Departments** (default). Empty `departmentId` returns every active student. |
+| **Search** | Filters by name, uni/roll number, login `userId`, or email (debounced 300ms). Default load shows **all** students matching the department filter. |
+| **Table** | One row per student **per subject**; first row of each student shows Uni No, Name, Semester, Section; following rows show additional subjects only. Columns: Uni No, Name, Semester, Section, Subject, Total, Present, Absent. |
+| **Chart** | Recharts bar graph below the table — aggregated **Present** vs **Absent** for the currently filtered student set (`StudentAttendanceChart`). |
+| **Download** | **Download CSV Report** at the bottom of the table. |
+
+### API: student attendance overview
+
+- **Endpoint:** `GET /api/admin/students/overview?departmentId={optional}&search={optional}`
+- **Service:** `backend/src/services/adminStudent.service.ts` → `getStudentAttendanceOverview()`
+- **Logic:** Loads `StudentProfile` records (optional department filter + search), aggregates `Attendance` by `studentId` + `subjectId`. `late` counts as **Present**.
+
+**Response shape:**
+
+```json
+{
+  "students": [
+    {
+      "profileId": "...",
+      "uniNo": "STU001",
+      "name": "Anjali Sharma",
+      "semester": 5,
+      "section": "A",
+      "subjects": [
+        { "subjectName": "Database Systems", "subjectCode": "CS-302", "present": 12, "absent": 2, "total": 14 }
+      ],
+      "totals": { "present": 12, "absent": 2, "total": 14 }
+    }
+  ],
+  "chart": { "present": 120, "absent": 18 }
+}
+```
+
+### API: CSV export
+
+- **Endpoint:** `GET /api/admin/students/export?departmentId={optional}&search={optional}`
+- **Format:** UTF-8 CSV with BOM; filename `sams_students_attendance_YYYY-MM-DD.csv`
+- **Columns:** `Uni No`, `Name`, `Subject`, `Subject Code`, `Semester`, `Section`, `Total`, `Present`, `Absent`
+- **Frontend:** `frontend/src/lib/download.ts` → `downloadAdminStudentReport()` (uses `fetch` + blob download)
+
+### Atomic components (students tab)
+
+| Layer | Component |
+| :--- | :--- |
+| Molecule | `DepartmentFilterSelect` (includes “All Departments”) |
+| Molecule | `SearchField` |
+| Organism | `StudentOverviewTable` |
+| Organism | `StudentAttendanceChart` |

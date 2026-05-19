@@ -1,9 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AppLayout from './components/AppLayout';
+import { AdminStitchLayout } from './components/templates/AdminStitchLayout';
+import DepartmentDashboard from './pages/admin/DepartmentDashboard';
 import Attendance from './pages/Attendance';
 import Timetable from './pages/Timetable.tsx';
 import Notifications from './pages/Notifications.tsx';
@@ -26,12 +28,38 @@ const RoleRoute = ({
 
 function App() {
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    document.body.classList.toggle('theme-neo-shinjuku', !!user && !isAdmin);
+  }, [user, isAdmin]);
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  if (isAdmin) {
+    return (
+      <Routes>
+        <Route element={<AdminStitchLayout />}>
+          <Route path="/" element={<DepartmentDashboard />} />
+          <Route path="/admin/students" element={<AdminStudents />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
+        </Route>
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-      
-      <Route element={user ? <AppLayout /> : <Navigate to="/login" replace />}>
+      <Route element={<AppLayout />}>
         <Route path="/" element={<Dashboard />} />
         <Route
           path="/attendance"
@@ -73,24 +101,8 @@ function App() {
             </RoleRoute>
           }
         />
-        <Route
-          path="/admin/students"
-          element={
-            <RoleRoute allowed={['admin']}>
-              <AdminStudents />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/admin/notifications"
-          element={
-            <RoleRoute allowed={['admin']}>
-              <AdminNotifications />
-            </RoleRoute>
-          }
-        />
       </Route>
-      
+      <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

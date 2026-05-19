@@ -11,6 +11,12 @@ import Attendance from '../models/Attendance.model';
 import Notification from '../models/Notification.model';
 import { createTimetableSchema } from '../validators/timetable.validator';
 import { sendSuccess, sendError } from '../utils/response';
+import { getFacultySubjectAttendanceByDepartment } from '../services/adminAttendance.service';
+import {
+  buildStudentAttendanceCsv,
+  getStudentAttendanceOverview,
+} from '../services/adminStudent.service';
+import { createTeacherSchema } from '../validators/admin.validator';
 
 // GET /api/admin/dashboard
 export const getAdminDashboard = async (_req: Request, res: Response): Promise<void> => {
@@ -57,10 +63,48 @@ export const createStudent = async (req: AuthRequest, res: Response): Promise<vo
 // POST /api/admin/teacher/create
 export const createTeacher = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { fullName, userId, email, password, employeeId, departments, subjects, phone } = req.body;
+    const parsed = createTeacherSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, 'Validation failed', 422, parsed.error.errors);
+      return;
+    }
+    const { fullName, userId, email, password, employeeId, departments, subjects, phone } = parsed.data;
+
+    const existing = await User.findOne({ $or: [{ userId }, { email }] });
+    if (existing) {
+      sendError(res, 'User ID or email already exists', 409);
+      return;
+    }
+
     const user = await User.create({ fullName, userId, email, password, role: 'teacher' });
-    const profile = await TeacherProfile.create({ userId: user._id, employeeId, departments, subjects, phone });
-    sendSuccess(res, { user: { id: user._id, userId: user.userId, fullName: user.fullName }, profile }, 'Teacher created', 201);
+    const profile = await TeacherProfile.create({
+      userId: user._id,
+      employeeId,
+      departments,
+      subjects,
+      phone,
+    });
+    sendSuccess(
+      res,
+      { user: { id: user._id, userId: user.userId, fullName: user.fullName }, profile },
+      'Teacher created',
+      201
+    );
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/subjects?departmentId=
+export const getSubjectsByDepartment = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId } = req.query;
+    if (!departmentId || typeof departmentId !== 'string') {
+      sendError(res, 'departmentId query parameter is required', 400);
+      return;
+    }
+    const subjects = await Subject.find({ departmentId }).select('name code semester credits');
+    sendSuccess(res, subjects);
   } catch (err) {
     sendError(res, (err as Error).message);
   }
@@ -127,6 +171,21 @@ export const sendNotification = async (req: AuthRequest, res: Response): Promise
   }
 };
 
+// GET /api/admin/faculty-attendance?departmentId=
+export const getFacultySubjectAttendance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId } = req.query;
+    if (!departmentId || typeof departmentId !== 'string') {
+      sendError(res, 'departmentId query parameter is required', 400);
+      return;
+    }
+    const rows = await getFacultySubjectAttendanceByDepartment(departmentId);
+    sendSuccess(res, rows);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
 // GET /api/admin/analytics
 export const getAdminAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -179,6 +238,38 @@ export const getAdminAnalytics = async (req: Request, res: Response): Promise<vo
     ]);
 
     sendSuccess(res, { overall: overall[0] || {}, departments });
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/students/overview?departmentId=&search=
+export const getStudentsAttendanceOverview = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, search } = req.query;
+    const result = await getStudentAttendanceOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    sendSuccess(res, result);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
+// GET /api/admin/students/export?departmentId=&search=
+export const exportStudentsAttendance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { departmentId, search } = req.query;
+    const result = await getStudentAttendanceOverview({
+      departmentId: typeof departmentId === 'string' && departmentId ? departmentId : undefined,
+      search: typeof search === 'string' ? search : undefined,
+    });
+    const csv = buildStudentAttendanceCsv(result.exportRows);
+    const filename = `sams_students_attendance_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv);
   } catch (err) {
     sendError(res, (err as Error).message);
   }
