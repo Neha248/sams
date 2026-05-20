@@ -7,20 +7,14 @@ import AppLayout from './components/AppLayout';
 import { AdminStitchLayout } from './components/templates/AdminStitchLayout';
 import DepartmentDashboard from './pages/admin/DepartmentDashboard';
 import Attendance from './pages/Attendance';
-import Timetable from './pages/Timetable.tsx';
-import Notifications from './pages/Notifications.tsx';
-import TeacherAttendance from './pages/TeacherAttendance.tsx';
-import TeacherAnalytics from './pages/TeacherAnalytics.tsx';
-import AdminStudents from './pages/AdminStudents.tsx';
-import AdminTeachers from './pages/AdminTeachers.tsx';
-import AdminNotifications from './pages/AdminNotifications.tsx';
-import AdminTimetable from './pages/AdminTimetable.tsx';
 import Timetable from './pages/Timetable';
 import Notifications from './pages/Notifications';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherAnalytics from './pages/TeacherAnalytics';
 import AdminStudents from './pages/AdminStudents';
+import AdminTeachers from './pages/AdminTeachers';
 import AdminNotifications from './pages/AdminNotifications';
+import AdminTimetable from './pages/AdminTimetable';
 
 const RoleRoute = ({
   allowed,
