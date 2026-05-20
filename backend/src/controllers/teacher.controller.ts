@@ -274,6 +274,11 @@ export const getTeacherNotifications = async (req: AuthRequest, res: Response): 
     }));
 
     sendSuccess(res, enriched);
+  } catch (err) {
+    sendError(res, (err as Error).message);
+  }
+};
+
 // GET /api/teacher/dashboard/overview
 export const getTeacherDashboardOverview = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
