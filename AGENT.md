@@ -1,12 +1,13 @@
 # AGENT.md
 
 ## Project Overview
+
 - **Project name**: Smart Attendance Management System (SAMS)
 - **Purpose of the project**: To design and implement a complete, production-ready full-stack Enterprise Resource Planning (ERP) application focused specifically on University/School attendance management.
 - **Problem statement**: Traditional attendance management systems are tedious and prone to errors. SAMS aims to provide a centralized, highly-secure, and visually appealing digital system to streamline attendance tracking for admins, teachers, and students.
 - **End goal**: A fully functional, production-ready ERP system with seamless user experiences across three roles (Admin, Teacher, Student) built with a modern stack and fully containerized via Docker.
 - **Target users**: Admin (Full read/write, management), Teacher (Attendance marking, view timetable/analytics), Student (View personal history and required classes).
-- **Expected final product appearance and behavior**: 
+- **Expected final product appearance and behavior**:
   - **Theme**: "Neo-Shinjuku Night" - Tokyo minimalism, highly premium, futuristic, dark mode.
   - **Colors**: Deep Navy / Charcoal base, Tokyo Neon Blue, Neon Cyan, and Soft Red/Crimson accents. White/Light Grays for secondary text.
   - **Aesthetics**: Glassmorphism, ambient glows, asymmetrical layouts, smooth micro-animations.
@@ -25,11 +26,13 @@
 ## Project Status
 
 ### Purpose
+
 This section helps future AI agents understand the current implementation progress and identify the gap between the current state and target state for key features.
 
 ### Current Development State
 
 #### Completed:
+
 - ✅ **Authentication**: Full JWT auth backend & frontend routing guards integration (JWT + RBAC).
 - ✅ **Role separation**: Explicit Admin / Teacher / Student role separation and workflows.
 - ✅ **Docker setup**: Fully functional Multi-Container environment with backend, frontend, MongoDB, and Mongo-Express.
@@ -41,6 +44,7 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Local dev tooling (Windows)**: `docker-compose.mongo.yml` (MongoDB-only), `scripts/start-mongo.ps1`, `scripts/free-port.ps1` (Node-only, port **5001**); local backend **5001** + Docker backend **5000** can coexist; Vite proxies via `frontend/.env.development`.
 
 #### In Progress:
+
 - 🚧 **Attendance tracking**: Core schemas and seed data done. Teacher attendance UI grids and 75% visual checks are partially implemented but need complete interactive integration.
 - ✅ **Admin Notifications portal** (`/admin/notifications`): Stitch-themed composer with title, message, **Global** / **Student** / **Teacher** targeting; department + recipient dropdown for individuals — `AdminNotifications.tsx`, `notification.validator.ts`, `POST /api/admin/notifications/send`.
 - 🚧 **Notifications (student/teacher feeds)**: In-app list pages exist; read/unread mutations and realtime toasts are still planned.
@@ -49,18 +53,21 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Neo-Shinjuku theme system**: Deep navy base, custom cyan accents, glassmorphic cards, and ticking clocks.
 
 #### In Progress:
+
 - 🚧 **Teacher Dashboard V2**: Connecting the frontend list page to live schedule queries.
 - 🚧 **Teacher Attendance workflow**: Interactive checklist screens for active classes.
 - 🚧 **Teacher analytics redesign**: Subject completion trends and Recharts components.
 - 🚧 **Dashboard API integration**: Binding live endpoints (`GET /teacher/dashboard/classes`).
 
 #### Planned:
+
 - 📌 **Realtime attendance updates**: Instant telemetry push of logged attendance states.
 - 📌 **WebSocket notification layer**: Socket.io broadcasts for cohort alerts.
 - 📌 **Mobile application**: Native companion React Native client.
 - 📌 **Payroll module**: Integration with administrative financial metrics.
 
 #### Blocked / Deferred:
+
 - ❌ **DB schema optimization**: Postponed until transaction counts exceed limits.
 - ❌ **Attendance aggregation optimization**: Cache optimization is deferred.
 - ❌ **Timetable relationship tuning**: Custom multi-period indexes deferred.
@@ -72,11 +79,13 @@ This section helps future AI agents understand the current implementation progre
 This section coordinates the structural transition from legacy ERP configurations to SAMS Teacher Module V2.
 
 #### Current State
+
 - **Legacy Framework**: Teacher modules contain outdated sidebar items and cluttered, unaligned widgets.
 - **Navigation Bloat**: Legacy dashboard holds inactive references like the custom Timetable page grid.
 - **Visual Placeholders**: Analytics panels contain mock charts and non-functional statistics numbers.
 
 #### Target State
+
 - **Workflow-Centric Structure**: Navigation menu is strictly locked down to three items:
   ```text
   Teacher
@@ -88,6 +97,7 @@ This section coordinates the structural transition from legacy ERP configuration
 - **Synchronized Daily Schedules**: Schedules automatically calculate completion states dynamically matching today's logged attendance records.
 
 #### Remaining Gap
+
 - **Attendance Synchronization Layer**: Wiring the synchronizer helper file logic to Mongoose write mutations.
 - **Timetable Schema Linkage**: Integrating active Timetable period collections with teacher profile references.
 - **Analytics & Graphs Redesign**: Replacing current analytical Recharts skeletons with database metrics.
@@ -95,11 +105,76 @@ This section coordinates the structural transition from legacy ERP configuration
 
 Goal: Use this status overview to quickly determine which systems to write, extend, or configure without repeating existing boilerplate.
 
+---
+
+## Recent Changes and Fixes (Session: May 23, 2026)
+
+This section documents recent updates, bug fixes, and improvements made to the SAMS codebase.
+
+### 1. **Port Configuration & Development Setup Fix**
+
+- **Issue**: Backend was configured to use port `5000`, conflicting with Docker's reserved port, causing error: "Port 5000 is already in use."
+- **Resolution**:
+  - Updated `backend/.env`: Changed `PORT=5000` to `PORT=5001`
+  - Allows local development (`npm run dev`) on port **5001** and Docker stack on port **5000** to coexist
+  - Ran `scripts/free-port.ps1` to free up port 5001 from any lingering Node processes
+- **Files Modified**:
+  - `backend/.env`
+  - `scripts/free-port.ps1`
+- **Impact**: ✅ Developers can now run local backend development without port conflicts
+
+### 2. **PowerShell Script Syntax Fix**
+
+- **Issue**: `scripts/free-port.ps1` contained encoding errors with em-dashes (—) characters, causing PowerShell parser failures
+- **Error Message**: "The string is missing the terminator" and "Missing closing '}' in statement block"
+- **Resolution**: Replaced em-dashes (—) with regular hyphens (-) in Write-Host statements
+- **Files Modified**:
+  - `scripts/free-port.ps1` (lines 2 and 50)
+- **Impact**: ✅ Script now executes without syntax errors on Windows PowerShell
+
+### 3. **README Documentation Enhancement**
+
+- **Changes**:
+  - **Reorganized "Run Modes" section**: Moved Docker Compose to Option A (recommended) and Local Development to Option B for better clarity
+  - **Added comprehensive "Contributing" section** with:
+    - Branch creation guidelines: `teacher-dashboard`, `admin-dashboard`, `student-dashboard`
+    - Branch naming pattern with examples for sub-features
+    - Step-by-step development workflow
+    - Complete guide to pushing code and creating Pull Requests
+    - Best practices for atomic commits and merging
+- **Files Modified**:
+  - `README.md`
+- **Impact**: ✅ New contributors have clear guidelines for feature branching and contribution workflow
+
+### 4. **Documentation Consolidation**
+
+- **Changes**: Merged `CURSOR.md` into `AGENT.md` to maintain a single source of truth
+  - Integrated enhanced System Architecture details from CURSOR.md
+  - Added explicit mention of Shadcn UI logic and Lucide-React components
+  - Preserved all project metadata and API contracts
+- **Files Modified**:
+  - `AGENT.md` (enhanced System Architecture section)
+- **Impact**: ✅ Centralized project documentation reduces confusion and maintenance overhead
+
+### 5. **System Architecture Documentation Update**
+
+- **Enhancement**: Updated System Architecture Overview with additional frontend technology details:
+  - Added "Shadcn UI logic" for component library pattern
+  - Added "Lucide-React" for icon/visual components
+  - Clarified "local-storage persistence" for Zustand state management
+  - Maintained dual-theme architecture documentation
+- **Files Modified**:
+  - `AGENT.md` (line ~99)
+- **Impact**: ✅ Developers have clearer understanding of frontend tech stack
+
+---
+
 ## System Architecture Overview
-- **Frontend architecture**: React 18 initialized via Vite, utilizing Tailwind CSS. **Dual themes:** Neo-Shinjuku Night (`AppLayout` — student/teacher) and Academic Intelligence / Stitch glass (`AdminStitchLayout` — admin). Atomic design under `components/{atoms,molecules,organisms,templates}`. Zustand for auth state; React Router v6; Axios; Recharts on admin Students tab.
+
+- **Frontend architecture**: React 18 initialized via Vite, utilizing Tailwind CSS for the custom Neo-Shinjuku theme (with Shadcn UI logic). Zustand is used for state management with local-storage persistence. React Router v6 for routing, Axios for API calls, and Lucide-React/Recharts for visuals. **Dual themes:** Neo-Shinjuku Night (`AppLayout` — student/teacher) and Academic Intelligence / Stitch glass (`AdminStitchLayout` — admin). Atomic design under `components/{atoms,molecules,organisms,templates}`.
 - **Backend architecture**: Node.js powered by Express, written in strict TypeScript. Follows a layered architecture with controllers, services, middlewares, models, and routes. Validations are enforced using Zod.
 - **Database structure**: MongoDB inside a Docker container, accessed via Mongoose. Includes models like `User`, `StudentProfile`, `TeacherProfile`, `Department`, `Subject`, `Timetable`, `Attendance`, and `Notification`.
-- **APIs**: RESTful JSON endpoints grouped under `/api/*`. Divided by concerns (Auth, Student, Teacher, Admin). 
+- **APIs**: RESTful JSON endpoints grouped under `/api/*`. Divided by concerns (Auth, Student, Teacher, Admin).
 - **Authentication flow**: Custom JSON Web Tokens (JWT) combined with Bcrypt password hashing. Login provides a JWT which is auto-injected by Axios interceptors for subsequent authorized requests.
 - **State management**: Zustand is used for global state (e.g., auth state, user profile) persisting to `localStorage`.
 - **Data flow**: Client (React) -> Axios -> Nginx Proxy -> Backend (Express) -> Auth/Role Middleware -> Controller -> Service -> Mongoose Model -> MongoDB.
@@ -127,16 +202,16 @@ erDiagram
 
 ### Detailed Relationships Table
 
-| Source Entity | Target Entity | Cardinality | Foreign Key / Ref Field | Ownership | Constraints & Indexes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **User** | **StudentProfile** | `1:1` | `StudentProfile.userId` | **User** owns identity; **StudentProfile** holds academic details. | `unique: true` on `userId` (strictly enforces 1:1 at DB level). |
-| **User** | **TeacherProfile** | `1:1` | `TeacherProfile.userId` | **User** owns identity; **TeacherProfile** holds professional details. | `unique: true` on `userId` (strictly enforces 1:1 at DB level). |
-| **Department** | **Subject** | `1:N` | `Subject.departmentId` | **Department** owns subjects. | `required: true` reference. |
-| **TeacherProfile** | **Timetable** | `1:N` | `Timetable.teacherId` | **Timetable** tracks the scheduled teaching slots assigned to a teacher. | References the parent `User` record of a teacher. |
-| **StudentProfile** | **Attendance** | `1:N` | `Attendance.studentId` | **Attendance** tracks history for students. | References the parent `User` record of a student. |
-| **Attendance** | **User (Student)** | `N:1` | `Attendance.studentId` | Junction document linking transactions. | `required: true` reference. |
-| **Attendance** | **Subject** | `N:1` | `Attendance.subjectId` | Junction document linking transactions. | `required: true` reference. |
-| **Attendance** | **User (Teacher)** | `N:1` | `Attendance.teacherId` | Junction document linking transactions. | `required: true` reference. |
+| Source Entity      | Target Entity      | Cardinality | Foreign Key / Ref Field | Ownership                                                                | Constraints & Indexes                                           |
+| :----------------- | :----------------- | :---------- | :---------------------- | :----------------------------------------------------------------------- | :-------------------------------------------------------------- |
+| **User**           | **StudentProfile** | `1:1`       | `StudentProfile.userId` | **User** owns identity; **StudentProfile** holds academic details.       | `unique: true` on `userId` (strictly enforces 1:1 at DB level). |
+| **User**           | **TeacherProfile** | `1:1`       | `TeacherProfile.userId` | **User** owns identity; **TeacherProfile** holds professional details.   | `unique: true` on `userId` (strictly enforces 1:1 at DB level). |
+| **Department**     | **Subject**        | `1:N`       | `Subject.departmentId`  | **Department** owns subjects.                                            | `required: true` reference.                                     |
+| **TeacherProfile** | **Timetable**      | `1:N`       | `Timetable.teacherId`   | **Timetable** tracks the scheduled teaching slots assigned to a teacher. | References the parent `User` record of a teacher.               |
+| **StudentProfile** | **Attendance**     | `1:N`       | `Attendance.studentId`  | **Attendance** tracks history for students.                              | References the parent `User` record of a student.               |
+| **Attendance**     | **User (Student)** | `N:1`       | `Attendance.studentId`  | Junction document linking transactions.                                  | `required: true` reference.                                     |
+| **Attendance**     | **Subject**        | `N:1`       | `Attendance.subjectId`  | Junction document linking transactions.                                  | `required: true` reference.                                     |
+| **Attendance**     | **User (Teacher)** | `N:1`       | `Attendance.teacherId`  | Junction document linking transactions.                                  | `required: true` reference.                                     |
 
 ---
 
@@ -145,15 +220,20 @@ erDiagram
 To guarantee rapid query response times and prevent logical duplicate records, the following indexing strategy is enforced:
 
 #### Attendance Unique Compound Index
+
 - **Fields**: `studentId` (asc) + `subjectId` (asc) + `date` (asc)
 - **Constraint**: `UNIQUE`
 - **Mongoose Definition**:
   ```typescript
-  AttendanceSchema.index({ studentId: 1, subjectId: 1, date: 1 }, { unique: true });
+  AttendanceSchema.index(
+    { studentId: 1, subjectId: 1, date: 1 },
+    { unique: true },
+  );
   ```
 - **Why this exists**: Ensures that a student cannot have more than one attendance status logged for the exact same subject on the exact same date. Duplicate transactions are rejected at the database driver level.
 
 #### Profile Unique Single Indexes
+
 - **Student Profile**: `rollNumber` (`unique: true`) and `userId` (`unique: true`).
 - **Teacher Profile**: `employeeId` (`unique: true`) and `userId` (`unique: true`).
 
@@ -162,20 +242,24 @@ To guarantee rapid query response times and prevent logical duplicate records, t
 ### Key Explanations & Query Guidelines
 
 #### Why these relationships exist
+
 MongoDB is configured as a relational document store using Mongoose references (`ref`). This balances document-size limits and relational integrity. By separating user credentials (`User`) from localized profiles (`StudentProfile`/`TeacherProfile`), we avoid bloating the authentication schema with properties unique to academic or employee details.
 
 #### How queries should work
+
 To query relational documents efficiently, always use `.populate()` or Mongo Aggregations:
+
 1. **Fetching Student Academic Profile**:
    ```typescript
-   StudentProfile.findOne({ rollNumber: 'STU001' })
-     .populate('userId', 'fullName email isActive')
-     .populate('departmentId', 'name code');
+   StudentProfile.findOne({ rollNumber: "STU001" })
+     .populate("userId", "fullName email isActive")
+     .populate("departmentId", "name code");
    ```
 2. **Aggregating Student Attendance Summary**:
    Match by `studentId`, group by `status`, and calculate compliance against the 75% rule in the backend service layer rather than pulling all raw items into memory when large counts exist.
 
 #### How AI should extend models safely
+
 - **Avoid Unbounded Arrays**: Never embed arrays of transactions (like a list of every single attendance record ID) inside parent profiles. Always store parent references (`studentId`) in the child transactions to keep document sizes within the 16MB BSON limit.
 - **Maintain Schema Enforcements**: Every reference to `User` must have an associated JSDoc indicating whether it expects a `student`, `teacher`, or `admin` role context.
 - **Double-check Indexes**: When adding a new unique key or field, ensure standard indexing conventions are declared in the schema files.
@@ -187,13 +271,16 @@ To query relational documents efficiently, always use `.populate()` or Mongo Agg
 To prevent breaking active developer workflows, all structural database alterations have been deferred. The current architecture employs placeholder service configurations mapped with clear directives for incoming teams:
 
 #### Future Schema Relationships
+
 1. **Teacher $\rightarrow$ Timetable**: Establish direct Mongoose model references linking daily teaching schedule periods.
 2. **Teacher $\rightarrow$ Assigned Classes**: Wire active departments and subject metrics to count daily assigned classes.
 3. **Attendance $\rightarrow$ Timetable linkage**: Bind logged records to the exact slot block of the active daily timetables.
 4. **Attendance $\rightarrow$ Completion state**: Build indexes verifying when a class moves from `pending` to `complete`.
 
 #### Codebase TODO Triggers
+
 All current Mongoose querying pipelines are mapped with explicit system-level placeholders:
+
 - `// TODO: connect timetable collection` inside the scheduler aggregation blocks.
 - `// TODO: connect attendance collection` inside the completions comparator engine.
 - `// TODO: connect aggregation layer` inside calculations services.
@@ -207,6 +294,7 @@ This section defines the API endpoints, request/response models, authorization r
 ### Endpoint Group: `/api/auth` (Authentication Services)
 
 #### 1. `POST /login`
+
 - **Purpose**: Authenticate user credentials and return an access token alongside session details.
 - **Actual Codebase Endpoint**: `/api/auth/login`
 - **Request Body**:
@@ -240,6 +328,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `User.model.ts` (Read).
 
 #### 2. `POST /register`
+
 - **Purpose**: Register a new user and create an associated role-based profile (Student/Teacher).
 - **Actual Codebase Endpoint**: Handled administratively via `/api/admin/student/create` or `/api/admin/teacher/create` (but structurally extensible under `/api/auth/register`).
 - **Request Body**:
@@ -274,6 +363,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `User.model.ts` (Write), `StudentProfile.model.ts` / `TeacherProfile.model.ts` (Write).
 
 #### 3. `POST /refresh`
+
 - **Purpose**: Refresh an expired session token using a refresh token.
 - **Actual Codebase Endpoint**: Planned expansion.
 - **Request Body**: None (Token passed via secure `httpOnly` cookie or headers).
@@ -296,6 +386,7 @@ This section defines the API endpoints, request/response models, authorization r
 ### Endpoint Group: `/api/student` (Student Workflows)
 
 #### 1. `GET /attendance`
+
 - **Purpose**: Retrieve historical and calculated attendance logs for the logged-in student, compiling compliance against the 75% rule.
 - **Actual Codebase Endpoint**: `/api/student/attendance`
 - **Request Body**: None.
@@ -327,6 +418,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Attendance.model.ts` (Read), `Subject.model.ts` (Read).
 
 #### 2. `GET /notifications`
+
 - **Purpose**: Retrieve targeted announcements and system alerts matching the student's department, semester, or section.
 - **Actual Codebase Endpoint**: `/api/student/notifications`
 - **Request Body**: None.
@@ -355,6 +447,7 @@ This section defines the API endpoints, request/response models, authorization r
 ### Endpoint Group: `/api/teacher` (Teacher Workflows)
 
 #### 1. `GET /dashboard/overview`
+
 - **Purpose**: Populate teacher dashboard stats cards and date/time metadata.
 - **Actual Codebase Endpoint**: `/api/teacher/dashboard/overview`
 - **Request Body**: None.
@@ -378,6 +471,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Timetable.model.ts` (Read), `Attendance.model.ts` (Read).
 
 #### 2. `GET /dashboard/classes`
+
 - **Purpose**: Fetch the teacher's daily class load schedule, sorting pending items first.
 - **Actual Codebase Endpoint**: `/api/teacher/dashboard/classes`
 - **Request Body**: None.
@@ -404,6 +498,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Timetable.model.ts` (Read), `Attendance.model.ts` (Read).
 
 #### 3. `POST /attendance`
+
 - **Purpose**: Mark daily or schedule-slot attendance for a specific cohort.
 - **Actual Codebase Endpoint**: `/api/teacher/attendance/mark`
 - **Request Body**:
@@ -413,7 +508,11 @@ This section defines the API endpoints, request/response models, authorization r
     "date": "2026-05-19T00:00:00.000Z",
     "attendance": [
       { "studentId": "6649f3e4...", "status": "present", "remarks": "" },
-      { "studentId": "6649f3ee...", "status": "absent", "remarks": "Late entry" }
+      {
+        "studentId": "6649f3ee...",
+        "status": "absent",
+        "remarks": "Late entry"
+      }
     ]
   }
   ```
@@ -430,6 +529,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Attendance.model.ts` (Write), `Timetable.model.ts` (Read).
 
 #### 4. `GET /analytics`
+
 - **Purpose**: Fetch statistical charts data, class averages, risk status categories, and schedule completion rates.
 - **Actual Codebase Endpoint**: `/api/teacher/analytics`
 - **Request Body**: None (URL queries).
@@ -457,6 +557,7 @@ This section defines the API endpoints, request/response models, authorization r
 ### Endpoint Group: `/api/admin` (Administrative Tools)
 
 #### 1. `GET /students`
+
 - **Purpose**: Fetch a paginated listing of all students alongside their linked login credentials.
 - **Actual Codebase Endpoint**: `/api/admin/students`
 - **Request Body**: None (URL queries `page` and `limit`).
@@ -484,6 +585,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `StudentProfile.model.ts` (Read), `User.model.ts` (Read).
 
 #### 2. `POST /subjects`
+
 - **Purpose**: Create a new academic subject linked under a department.
 - **Actual Codebase Endpoint**: `/api/admin/subject/create`
 - **Request Body**:
@@ -514,6 +616,7 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `Subject.model.ts` (Write).
 
 #### 3. `GET /students/overview`
+
 - **Purpose**: Attendance overview for admin Students tab — one entry per student with per-subject aggregates and chart totals.
 - **Actual Codebase Endpoint**: `/api/admin/students/overview?departmentId=&semester=&search=`
 - **Authorization**: JWT; `admin` only.
@@ -521,11 +624,13 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `StudentProfile`, `Attendance`, `Subject` (Read).
 
 #### 4. `GET /students/export`
+
 - **Purpose**: Download UTF-8 CSV of filtered student attendance rows.
 - **Actual Codebase Endpoint**: `/api/admin/students/export?departmentId=&semester=&search=`
 - **Service Used**: `buildStudentAttendanceCsv()` in `adminStudent.service.ts`.
 
 #### 5. `GET /teachers/overview`
+
 - **Purpose**: Expand each teacher profile into one row per assigned subject (department, semester, assignment date).
 - **Actual Codebase Endpoint**: `/api/admin/teachers/overview?departmentId=&semester=&search=`
 - **Query notes**: Omit `departmentId` for **all departments**; omit `semester` for all semesters.
@@ -533,67 +638,74 @@ This section defines the API endpoints, request/response models, authorization r
 - **Models Touched**: `TeacherProfile`, `User`, `Subject`, `Department` (Read).
 
 #### 6. `POST /teacher/create`
+
 - **Purpose**: Create teacher `User` + `TeacherProfile` with department and subject assignments.
 - **Actual Codebase Endpoint**: `/api/admin/teacher/create`
 - **Validator**: `createTeacherSchema` in `admin.validator.ts`.
 - **Models Touched**: `User`, `TeacherProfile` (Write).
 
 #### 7. `DELETE /teacher/:profileId`
+
 - **Purpose**: Soft-remove teacher (sets linked `User.isActive` to `false`).
 - **Actual Codebase Endpoint**: `/api/admin/teacher/:profileId`
 - **Models Touched**: `TeacherProfile` (Read), `User` (Write).
 
 #### 8. `GET /subjects`
+
 - **Purpose**: List subjects for a department; optional `semester` query for assign-teacher modal.
 - **Actual Codebase Endpoint**: `/api/admin/subjects?departmentId={required}&semester={optional}`
 
 #### 9. `GET /faculty-attendance`
+
 - **Purpose**: Department dashboard — present/absent counts per teacher–subject pair.
 - **Actual Codebase Endpoint**: `/api/admin/faculty-attendance?departmentId={id}`
 - **Service Used**: `getFacultySubjectAttendanceByDepartment()` in `adminAttendance.service.ts`.
 
 #### 10. `GET /timetable/overview`
+
 - **Purpose**: Admin timetable tab — list slots with UID, teacher, subject, department, section, semester, timing.
 - **Actual Codebase Endpoint**: `/api/admin/timetable/overview?departmentId=&semester=&section=&search=`
 - **Service Used**: `getTimetableOverview()` in `adminTimetable.service.ts`.
 - **Models Touched**: `Timetable`, `Subject`, `Department`, `User` (Read).
 
 #### 11. `PUT /timetable/:id` / `DELETE /timetable/:id`
+
 - **Purpose**: Update or remove a single timetable slot (backend only — not exposed in `/admin/timetable` table UI after Status/Actions removal).
 - **Validators**: `updateTimetableSchema` (PUT) in `timetable.validator.ts`.
 - **Models Touched**: `Timetable` (Write / Delete).
 
 #### 12. `PUT /timetable/publish`
+
 - **Purpose**: Publish all draft slots for a department + semester + section cohort.
 - **Request Body**: `{ "departmentId": "...", "semester": 5, "section": "A" }`
 - **Validator**: `publishTimetableSchema` in `timetable.validator.ts`.
 
 ### Admin API Route Map (`backend/src/routes/admin.routes.ts`)
 
-| Method | Path | Handler |
-| :--- | :--- | :--- |
-| GET | `/dashboard` | `getAdminDashboard` |
-| GET | `/analytics` | `getAdminAnalytics` |
-| GET | `/faculty-attendance` | `getFacultySubjectAttendance` |
-| GET | `/subjects` | `getSubjectsByDepartment` |
-| GET | `/students/overview` | `getStudentsAttendanceOverview` |
-| GET | `/students/export` | `exportStudentsAttendance` |
-| GET | `/students` | `getAllStudents` |
-| POST | `/student/create` | `createStudent` |
-| DELETE | `/student/:id` | `deleteStudent` (User `_id`) |
-| GET | `/teachers/overview` | `getTeachersAssignmentsOverview` |
-| GET | `/teachers` | `getAllTeachers` |
-| POST | `/teacher/create` | `createTeacher` |
-| DELETE | `/teacher/:profileId` | `deleteTeacher` |
-| GET | `/departments` | `getAllDepartments` |
-| POST | `/department/create` | `createDepartment` |
-| POST | `/subject/create` | `createSubject` |
-| POST | `/timetable/create` | `createTimetable` |
-| GET | `/timetable/overview` | `getTimetableOverviewHandler` |
-| PUT | `/timetable/publish` | `publishTimetable` |
-| PUT | `/timetable/:id` | `updateTimetable` |
-| DELETE | `/timetable/:id` | `deleteTimetable` |
-| POST | `/notifications/send` | `sendNotification` |
+| Method | Path                  | Handler                          |
+| :----- | :-------------------- | :------------------------------- |
+| GET    | `/dashboard`          | `getAdminDashboard`              |
+| GET    | `/analytics`          | `getAdminAnalytics`              |
+| GET    | `/faculty-attendance` | `getFacultySubjectAttendance`    |
+| GET    | `/subjects`           | `getSubjectsByDepartment`        |
+| GET    | `/students/overview`  | `getStudentsAttendanceOverview`  |
+| GET    | `/students/export`    | `exportStudentsAttendance`       |
+| GET    | `/students`           | `getAllStudents`                 |
+| POST   | `/student/create`     | `createStudent`                  |
+| DELETE | `/student/:id`        | `deleteStudent` (User `_id`)     |
+| GET    | `/teachers/overview`  | `getTeachersAssignmentsOverview` |
+| GET    | `/teachers`           | `getAllTeachers`                 |
+| POST   | `/teacher/create`     | `createTeacher`                  |
+| DELETE | `/teacher/:profileId` | `deleteTeacher`                  |
+| GET    | `/departments`        | `getAllDepartments`              |
+| POST   | `/department/create`  | `createDepartment`               |
+| POST   | `/subject/create`     | `createSubject`                  |
+| POST   | `/timetable/create`   | `createTimetable`                |
+| GET    | `/timetable/overview` | `getTimetableOverviewHandler`    |
+| PUT    | `/timetable/publish`  | `publishTimetable`               |
+| PUT    | `/timetable/:id`      | `updateTimetable`                |
+| DELETE | `/timetable/:id`      | `deleteTimetable`                |
+| POST   | `/notifications/send` | `sendNotification`               |
 
 ## Frontend Routing Structure
 
@@ -604,6 +716,7 @@ This section outlines client-side routes, their visual page layouts, component d
 ### Student Navigation Domain
 
 #### 1. Route: `/` (Dashboard Overview)
+
 - **Page Owner**: `Dashboard.tsx`
 - **Components Used**: `StatCard`, Glass-panel dashboards, visual loader grids.
 - **Store Dependencies**: `useAuthStore` (subscribes to authenticated `user` metadata).
@@ -612,6 +725,7 @@ This section outlines client-side routes, their visual page layouts, component d
 - **Role Access**: `student` (Shared route; dynamically renders Admin/Teacher dashboards for other roles).
 
 #### 2. Route: `/attendance` (Attendance Ledger)
+
 - **Page Owner**: `Attendance.tsx`
 - **Components Used**: Glass-panel records lists, tab filters (Present, Absent, Late), calendar ranges, PDF download trigger buttons.
 - **Store Dependencies**: `useAuthStore` (reads context student identifiers).
@@ -620,6 +734,7 @@ This section outlines client-side routes, their visual page layouts, component d
 - **Role Access**: `student`
 
 #### 3. Route: `/timetable` (Personal Schedule)
+
 - **Page Owner**: `Timetable.tsx`
 - **Components Used**: Weekly Grid Scheduler (Monday - Saturday), Time slot rows, Course card panels.
 - **Store Dependencies**: `useAuthStore` (reads academic cohort properties: `semester`, `section`, `departmentId`).
@@ -628,6 +743,7 @@ This section outlines client-side routes, their visual page layouts, component d
 - **Role Access**: `student` (also shared with `teacher` roles, running distinct query scopes).
 
 #### 4. Route: `/notifications` (Cohort Announcements)
+
 - **Page Owner**: `Notifications.tsx`
 - **Components Used**: Priority indicator chips, rich alert list cards, read status toggles.
 - **Store Dependencies**: `useAuthStore` (queries notifications matching current student cohorts).
@@ -640,6 +756,7 @@ This section outlines client-side routes, their visual page layouts, component d
 ### Teacher Navigation Domain
 
 #### 1. Route: `/teacher/dashboard` (Terminal Overview Registry)
+
 - **Page Owner**: `Dashboard.tsx`
 - **Components Used**: Status cards, real-time IST clock, ticking timers, registry date card, classes daily schedule matrix.
 - **Store Dependencies**: `useAuthStore` (reads active logged-in teacher profile context).
@@ -655,6 +772,7 @@ This section outlines client-side routes, their visual page layouts, component d
 - **Role Access**: `teacher` (READONLY)
 
 #### 2. Route: `/teacher/attendance` (Attendance Control Board)
+
 - **Page Owner**: `TeacherAttendance.tsx`
 - **Components Used**: Student roster checklist tables, status checkboards, visual save buttons.
 - **Store Dependencies**: `useAuthStore` (reads profile metadata).
@@ -663,6 +781,7 @@ This section outlines client-side routes, their visual page layouts, component d
 - **Role Access**: `teacher` (WRITE)
 
 #### 3. Route: `/teacher/analysis` (Performance Analysis Console)
+
 - **Page Owner**: `TeacherAnalytics.tsx`
 - **Components Used**: `AnalyticsFilters`, `AnalyticsTable`, `AttendanceOverviewChart`, `StudentTrendChart`, `ExportPanel` (Recharts).
 - **Store Dependencies**: `useAuthStore` (reads scope boundaries).
@@ -681,15 +800,16 @@ This section outlines client-side routes, their visual page layouts, component d
 
 Admin sidebar (`AdminSidebar.tsx`):
 
-| Label | Route |
-| :--- | :--- |
-| Departments | `/` |
-| Students | `/admin/students` |
-| Teachers | `/admin/teachers` |
-| Timetable | `/admin/timetable` |
+| Label         | Route                  |
+| :------------ | :--------------------- |
+| Departments   | `/`                    |
+| Students      | `/admin/students`      |
+| Teachers      | `/admin/teachers`      |
+| Timetable     | `/admin/timetable`     |
 | Notifications | `/admin/notifications` |
 
 #### 1. Route: `/admin/students` (Student Attendance Overview)
+
 - **Page Owner**: `AdminStudents.tsx`
 - **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField`, `StudentOverviewTable`, `StudentAttendanceChart`
 - **Store Dependencies**: `useAuthStore` (validates admin credentials).
@@ -706,6 +826,7 @@ Admin sidebar (`AdminSidebar.tsx`):
 - **Role Access**: `admin`
 
 #### 3. Route: `/admin/timetable` (Timetable Management)
+
 - **Page Owner**: `AdminTimetable.tsx`
 - **Components Used**: `DepartmentFilterSelect`, `SemesterFilterSelect`, `SectionFilterSelect`, `SearchField`, `TimetableOverviewTable`, `TimetableSlotModal`
 - **Store Dependencies**: `useAuthStore` (validates admin credentials).
@@ -714,6 +835,7 @@ Admin sidebar (`AdminSidebar.tsx`):
 - **Role Access**: `admin`
 
 #### 4. Route: `/admin/notifications` (Notifications Composer)
+
 - **Page Owner**: `AdminNotifications.tsx`
 - **Components Used**: `DepartmentSelect`, `MaterialIcon`, Stitch glass form card.
 - **Store Dependencies**: `useAuthStore` (admin auth).
@@ -775,6 +897,7 @@ sams/
 ```
 
 ### `backend/`
+
 - **Purpose:** Houses the Node.js Express server.
 - **What this folder stores:** Backend application code, Dockerfile, scripts, dependencies.
 - **Why it exists:** Separates the server environment from the client UI.
@@ -784,6 +907,7 @@ sams/
 - **Future expansion possibilities:** Adding `queues/` or `workers/` for background jobs.
 
 ### `backend/src/config/`
+
 - **Purpose:** Configuration setups.
 - **What this folder stores:** Database connection setups, environment variable parsers.
 - **Why it exists:** Centralizes configurations.
@@ -793,6 +917,7 @@ sams/
 - **Future expansion possibilities:** Integrations like Redis config, AWS config.
 
 ### `backend/src/controllers/`
+
 - **Purpose:** Route handlers.
 - **What this folder stores:** Functions that handle incoming HTTP requests and send responses.
 - **Why it exists:** Keeps routes clean and delegates business logic.
@@ -802,6 +927,7 @@ sams/
 - **Future expansion possibilities:** Versioning controllers (e.g., `v1/`, `v2/`).
 
 ### `backend/src/middlewares/`
+
 - **Purpose:** Request interception.
 - **What this folder stores:** Authentication guards, role checks, error handlers.
 - **Why it exists:** Ensures security and centralizes error handling across endpoints.
@@ -811,6 +937,7 @@ sams/
 - **Future expansion possibilities:** Rate limiting, request logging middlewares.
 
 ### `backend/src/models/`
+
 - **Purpose:** Database schemas.
 - **What this folder stores:** Mongoose schemas and models.
 - **Why it exists:** Defines the structure of MongoDB collections.
@@ -820,6 +947,7 @@ sams/
 - **Future expansion possibilities:** Adding methods/statics to schemas.
 
 ### `backend/src/routes/`
+
 - **Purpose:** API endpoints mapping.
 - **What this folder stores:** Express routers that bind paths to controllers.
 - **Why it exists:** Defines the API contract.
@@ -829,6 +957,7 @@ sams/
 - **Future expansion possibilities:** GraphQL integration alongside REST.
 
 ### `backend/src/services/`
+
 - **Purpose:** Business logic layer.
 - **What this folder stores:** Reusable logical operations, PDF generators, complex DB interactions.
 - **Why it exists:** Abstracts complexity away from controllers.
@@ -838,6 +967,7 @@ sams/
 - **Future expansion possibilities:** Notification dispatch services, reporting engines.
 
 ### `backend/src/utils/`
+
 - **Purpose:** Shared helper functions.
 - **What this folder stores:** JWT signers, loggers, response formatters.
 - **Why it exists:** DRY principle.
@@ -847,6 +977,7 @@ sams/
 - **Future expansion possibilities:** Date formatting, math utilities.
 
 ### `backend/src/validators/`
+
 - **Purpose:** Request validation schemas.
 - **What this folder stores:** Zod schemas for request payloads.
 - **Why it exists:** Prevents bad data from reaching controllers.
@@ -856,6 +987,7 @@ sams/
 - **Future expansion possibilities:** Complex custom validation rules.
 
 ### `backend/scripts/`
+
 - **Purpose:** Utility scripts for development.
 - **What this folder stores:** DB seeders, migration scripts.
 - **Why it exists:** Facilitates easy testing and environment setup.
@@ -865,6 +997,7 @@ sams/
 - **Future expansion possibilities:** Data migration scripts for production.
 
 ### `frontend/`
+
 - **Purpose:** The React SPA client.
 - **What this folder stores:** UI code, build configs, Dockerfile, Nginx config.
 - **Why it exists:** Hosts the visual application.
@@ -874,6 +1007,7 @@ sams/
 - **Future expansion possibilities:** Monorepo splitting (e.g., mobile app folder).
 
 ### `frontend/src/components/`
+
 - **Purpose:** Reusable UI pieces.
 - **What this folder stores:** Layouts, buttons, cards, modals.
 - **Why it exists:** Enforces consistency and DRY.
@@ -883,6 +1017,7 @@ sams/
 - **Future expansion possibilities:** A full design system library.
 
 ### `frontend/src/lib/`
+
 - **Purpose:** Core client libraries and utilities.
 - **What this folder stores:** Axios instances with interceptors, generic helper functions.
 - **Why it exists:** Centralizes network logic and shared client utilities.
@@ -892,6 +1027,7 @@ sams/
 - **Future expansion possibilities:** WebSockets client setup.
 
 ### `frontend/src/pages/`
+
 - **Purpose:** Application views.
 - **What this folder stores:** Top-level components representing routes.
 - **Why it exists:** Maps directly to Router URLs.
@@ -901,6 +1037,7 @@ sams/
 - **Future expansion possibilities:** Splitting into feature-based folders.
 
 ### `frontend/src/store/`
+
 - **Purpose:** Global state management.
 - **What this folder stores:** Zustand store configurations.
 - **Why it exists:** Manages cross-component state like auth.
@@ -909,7 +1046,6 @@ sams/
 - **Examples:** `authStore.ts`.
 - **Future expansion possibilities:** Caching layers, UI state stores.
 
-
 ## Folder Ownership Matrix
 
 To prevent developers and AI agents from mixing concerns, this section establishes the strict architectural boundaries, permissible imports, forbidden activities, and extension paradigms for each folder in the SAMS codebase.
@@ -917,6 +1053,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 1. `controllers/` (HTTP & Request Lifecycle Layer)
+
 - **Responsibilities**:
   - Acts as the entrypoint for incoming HTTP requests mapped by the Router.
   - Parses HTTP headers, query parameters, URL path variables, and body payloads.
@@ -937,6 +1074,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 2. `services/` (Core Business Logic Layer)
+
 - **Responsibilities**:
   - Contains the core functional rules, mathematical equations, and compliance checks of the system (e.g., dynamic "75% rule" calculations).
   - Executes database aggregations, CRUD profiles management, and document transformations.
@@ -956,6 +1094,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 3. `validators/` (Data Schema Validation Point)
+
 - **Responsibilities**:
   - Defines the runtime verification schemas governing all incoming API request bodies, path arguments, and queries.
   - Prevents malformed or malicious payloads from penetrating the server application.
@@ -970,6 +1109,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 4. `models/` (Database Schemas & Data Layer)
+
 - **Responsibilities**:
   - Declares Mongoose database schemas, collection configurations, compound index constraints, and relational type references.
   - Declares virtual fields and custom model method algorithms (e.g., Bcrypt password hashing pre-save hooks).
@@ -985,6 +1125,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 5. `pages/` (Visual Screens & Routing Views)
+
 - **Responsibilities**:
   - Acts as the parent container layout for React route targets.
   - Orchestrates screen-level state, handles async API dispatch calls, and reacts to store data updates.
@@ -1002,6 +1143,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 6. `components/` (Presentational UI Layouts)
+
 - **Responsibilities**:
   - Presentational building blocks of the Neo-Shinjuku theme design system.
   - Renders input forms, cards, tables, charts, navigation bars, and buttons based strictly on incoming props.
@@ -1018,6 +1160,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 7. `store/` (Global Client-Side State)
+
 - **Responsibilities**:
   - Manages cross-component global app state (e.g., user profiles, authorization tokens).
   - Manages storage synchronization logic (saving tokens in `localStorage`).
@@ -1032,6 +1175,7 @@ To prevent developers and AI agents from mixing concerns, this section establish
 ---
 
 ### 8. `utils/` (Shared Functional Logic Helpers)
+
 - **Responsibilities**:
   - Houses functional math checkers, standard date format string generators, cryptographic hash tools, and logs writers.
 - **Allowed Dependencies**:
@@ -1041,8 +1185,8 @@ To prevent developers and AI agents from mixing concerns, this section establish
   - **No State Preservation**: Must contain pure stateless functions; should not hold transient session state.
 - **Extension Rules**: Ensure functions are idempotent and thoroughly commented to help incoming developers understand their purposes.
 
-
 ## Component Responsibilities
+
 - **UI components:** Located in `frontend/src/components/`. Purely presentational. They receive props and emit events. Should adhere strictly to the "Neo-Shinjuku Night" design system.
 - **Business logic components:** Located in `frontend/src/pages/`. They orchestrate data fetching, interact with the global store, and pass data down to UI components.
 - **Shared modules:** Located in `frontend/src/lib/`. Examples include Axios interceptors for standardizing API calls and shared utility functions (`utils.ts`).
@@ -1052,7 +1196,8 @@ To prevent developers and AI agents from mixing concerns, this section establish
 - **API layers:** `backend/src/routes/` and `backend/src/controllers/`. Responsible for HTTP request parsing, calling validators, and invoking services.
 - **Service layers:** `backend/src/services/`. Holds the core business rules (e.g., PDF generation, complex queries) detached from HTTP logic.
 
-**Ownership boundaries:** 
+**Ownership boundaries:**
+
 - Frontend pages own UI composition and data fetching initiation.
 - Backend controllers own the HTTP response lifecycle.
 - Backend services own the business rules and DB transactions.
@@ -1070,7 +1215,7 @@ sequenceDiagram
     participant Express API (Controller)
     participant Backend Service
     participant MongoDB
-    
+
     User->>Frontend UI: Clicks Action (e.g., Login, Mark Attendance)
     Frontend UI->>Zustand/Axios: Dispatch action / Axios Call
     Zustand/Axios->>Express API (Controller): HTTP Request (with JWT if auth'd)
@@ -1091,6 +1236,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 1. Authentication Flow (User Login)
+
 - **Path Outline**:
   `User UI` (Login Form) → `authStore.ts` (Zustand dispatch) → `api.post('/auth/login')` → `auth.routes.ts` (Express routing) → `auth.validator.ts` (Zod parse) → `auth.controller.ts` → `User.model.ts` (Bcrypt match check) → `jwt.ts` (Sign token) → `authStore.ts` (Save token & profile) → `User UI` (Dashboard redirect).
 - **Owner Layer**:
@@ -1106,6 +1252,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 2. Attendance Logging Flow (Teacher Marks Roster)
+
 - **Path Outline**:
   `Teacher UI` (Roster Grid checkboxes) → `TeacherAttendance.tsx` (Trigger save) → `api.post('/teacher/attendance/mark')` → `teacher.routes.ts` (Authenticate & Role middleware) → `attendance.validator.ts` (Zod array check) → `teacher.controller.ts` → `Attendance.model.ts` (Bulk Mongoose upsert) → `Teacher UI` (Toast notification).
 - **Owner Layer**:
@@ -1121,6 +1268,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 3. Analytics Retrieval Flow (Teacher Reviews Roster Status)
+
 - **Path Outline**:
   `Teacher UI` (Analytics Tab dropdowns) → `TeacherAnalytics.tsx` (Fetch dispatch) → `api.get('/teacher/analytics')` → `teacher.routes.ts` (Teacher guard) → `teacher.controller.ts` → `Attendance.model.ts` (Mongoose Group aggregation) → `Teacher UI` (Render dashboard visualization charts).
 - **Owner Layer**:
@@ -1136,6 +1284,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 4. Notifications Broadcast Flow (Admin Blasts Alert)
+
 - **Path Outline**:
   `AdminNotifications.tsx` (title, message, Global | Student | Teacher + department/recipient) → `POST /api/admin/notifications/send` → `notification.validator.ts` (Zod) → `sendNotification` → `Notification.model.ts` → students/teachers fetch via `GET /api/student/notifications` or `GET /api/teacher/notifications`.
 - **Owner Layer**:
@@ -1152,6 +1301,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 5. Timetable Generation Flow (Admin Publishes Schedule Slots)
+
 - **Path Outline**:
   `Admin UI` (`AdminTimetable.tsx` — Add Slot / Publish Cohort) → `TimetableSlotModal` or publish button → `POST /api/admin/timetable/create` or `PUT /api/admin/timetable/publish` → `admin.routes.ts` → `timetable.validator.ts` → `admin.controller.ts` → `Timetable.model.ts` → `Student/Teacher` timetable views update on next fetch.
 - **Owner Layer**:
@@ -1167,6 +1317,7 @@ This section traces the full end-to-end execution path for key feature modules, 
 ---
 
 ### 6. PDF Report Generation & Export Flow (Student Downloads Compliance Audit)
+
 - **Path Outline**:
   `Student UI` (Clicks "Download Report") → `Attendance.tsx` (Axios trigger with blob responseType) → `api.get('/student/report/pdf')` → `student.routes.ts` (Auth context fetch) → `student.controller.ts` → `pdf.service.ts` (Generates custom branded document) → `student.controller.ts` (Stream blob response headers) → `Student UI` (Browser triggers local file download saving PDF).
 - **Owner Layer**:
@@ -1188,12 +1339,14 @@ This section documents the environmental configuration settings needed to run SA
 ### Variable Specifications
 
 #### 1. `PORT`
+
 - **Purpose**: Defines the TCP port number on which the Express REST API backend listens.
 - **Required/Optional**: Optional (will fallback to default if not provided).
 - **Default Value**: `5001` (local `backend/.env`); `5000` inside Docker (`docker-compose.yml`).
 - **Security Rules**: In production, do not expose this port directly to the public web. Ensure all traffic flows through an Nginx reverse proxy layer mapping standard HTTPS (443) down to the internal docker container gateway port.
 
 #### 2. `MONGO_URI`
+
 - **Purpose**: The connection string containing database server address, credentials, ports, and default database names for Mongoose.
 - **Required/Optional**: Required.
 - **Default Value (local `npm run dev`)**: `mongodb://127.0.0.1:27017/attendance_system` — prefer `127.0.0.1` over `localhost` on Windows to avoid IPv6 (`::1`) connection issues.
@@ -1201,24 +1354,28 @@ This section documents the environmental configuration settings needed to run SA
 - **Security Rules**: **CRITICAL SECURITY RISK**. Never commit actual database passwords or hostnames into public version control. In production, utilize secure environment variables or vault keys, and enforce IP-whitelisting on the MongoDB server to only allow connections from the backend proxy IP.
 
 #### 3. `JWT_SECRET`
+
 - **Purpose**: The cryptographic secret key used to sign and verify JSON Web Tokens (JWT) for secure request authentication.
 - **Required/Optional**: Required.
 - **Default Value**: `sams_super_secret_jwt_key_2026` (only for development/testing).
 - **Security Rules**: **CRITICAL SECURITY RISK**. Must be a highly complex, cryptographically secure random string in production (at least 256-bit entropy). Periodically rotate this secret to invalidate historical active sessions in case of leaks.
 
 #### 4. `JWT_EXPIRES`
+
 - **Purpose**: Sets the session lifespan duration for generated access tokens before client expiration is enforced.
 - **Required/Optional**: Optional.
 - **Default Value**: `7d` (7 days)
 - **Security Rules**: Standardize to short lifespans (e.g., `15m` or `1h`) in highly secure production deployments combined with separate Secure HttpOnly cookies for rotation checks via refresh tokens.
 
 #### 5. `BCRYPT_ROUNDS`
+
 - **Purpose**: Establishes the cost factor work parameter determining the computational intensity when generating Bcrypt password hashes.
 - **Required/Optional**: Optional.
 - **Default Value**: `12`
 - **Security Rules**: Set to a minimum of `12` to guard against brute-force decryption attacks, while keeping performance optimal (higher cost factors increase hashing latency on the authentication servers).
 
 #### 6. `CORS_ORIGIN`
+
 - **Purpose**: Defines the whitelist origin addresses permitted to execute cross-origin requests targeting the REST API endpoints.
 - **Required/Optional**: Required.
 - **Default Value**: `http://localhost:5173` (Frontend Vite Dev Server origin).
@@ -1229,7 +1386,9 @@ This section documents the environmental configuration settings needed to run SA
 ### Configuration Environments
 
 #### 1. Frontend Environment (`frontend/`)
+
 The frontend is a static React application built via Vite. In Vite, environment variables must be prefixed with `VITE_` to be exposed to the client bundle.
+
 - **Key Variables**:
   - `VITE_API_URL`: Mapped to the backend URL endpoint (e.g., `http://localhost:5000` in dev or `https://sams.edu/api` in prod).
   - `VITE_API_PROXY_TARGET`: **Local dev only** — where `vite.config.ts` proxies `/api` (default `http://localhost:5001` via `frontend/.env.development`). Docker full-stack backend remains on **5000**.
@@ -1237,14 +1396,18 @@ The frontend is a static React application built via Vite. In Vite, environment 
 - **Admin routing (dev)**: Log in as **admin**, then open `http://localhost:5173/admin/timetable`. Nested routes are declared in `App.tsx` under `AdminStitchLayout` (`path="admin/timetable"`).
 
 #### 2. Backend Environment (`backend/`)
+
 The Node.js server reads backend environment settings at initialization via the `dotenv` package.
+
 - **Key Variables**: `PORT`, `NODE_ENV`, `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `BCRYPT_ROUNDS`, `CORS_ORIGIN`.
 - **Behavior**: Loaded from `backend/.env`. Governs database connection options, JWT security seeds, and Bcrypt hashing difficulties.
 - **Database client** (`backend/src/config/db.ts`): Mongoose connects with `family: 4` (IPv4) and `serverSelectionTimeoutMS: 10000`. On connection failure the process **exits** — there is no API without MongoDB.
 - **Port binding** (`backend/src/server.ts`): Listens on `PORT` (default **`5001`** for local `.env`). If the port is in use (`EADDRINUSE`), the server **exits** (no random fallback). Vite proxies to the same port via `VITE_API_PROXY_TARGET`.
 
 #### 3. Docker Compose — full stack (`docker-compose.yml`)
+
 When running inside containers, environment variables are defined directly inside `docker-compose.yml` or a root-level `.env` file to orchestrate inter-container communication.
+
 - **Key Variables**:
   - `MONGO_URI`: Must resolve to the containerized service name instead of localhost, i.e., `mongodb://mongodb:27017/attendance_system`.
   - `MONGO_INITDB_ROOT_USERNAME` & `MONGO_INITDB_ROOT_PASSWORD`: Secure root login credentials for the MongoDB container.
@@ -1253,33 +1416,37 @@ When running inside containers, environment variables are defined directly insid
 - **Ports (host)**: Backend `5000:5000`, Frontend `3000:80`, MongoDB `27017:27017`, Mongo Express `8081:8081`.
 
 #### 3b. Docker Compose — MongoDB only (`docker-compose.mongo.yml`)
+
 Use when developing with **local** `npm run dev` for backend and frontend (Vite on `5173`).
 
-| Service | Container | Host port |
-| :--- | :--- | :--- |
-| `mongodb` | `attendance-mongodb` | `27017` |
+| Service   | Container            | Host port |
+| :-------- | :------------------- | :-------- |
+| `mongodb` | `attendance-mongodb` | `27017`   |
 
 - **Start**: `docker compose -f docker-compose.mongo.yml up -d` or `.\scripts\start-mongo.ps1` (requires Docker Desktop running).
 - **Port split**: Docker backend → host **5000**; local `npm run dev` backend → **5001**. They can run together; only MongoDB is required from Docker for hybrid dev.
 
 #### 4. Production Environment
+
 Production setups require hardened deployment configurations.
+
 - **Deployment Strategy**:
   - Exclude `.env` files from repository commits via strict `.gitignore` rules.
   - Inject environment variables securely via cloud provider configuration dashboards (e.g., AWS ECS Task Definitions, GCP Secret Manager, or Vercel/Render Environment tabs).
   - Force HTTPS (`NODE_ENV=production`) ensuring cookies are encrypted and tokens travel exclusively over secured SSL connections.
 
 ## Coding Standards
-- **Naming conventions:** 
+
+- **Naming conventions:**
   - **Folder naming:** camelCase or lowercase (e.g., `components`, `middlewares`).
-  - **File naming:** 
+  - **File naming:**
     - React components: PascalCase (e.g., `AppLayout.tsx`).
     - Backend specific: descriptive with type (e.g., `user.model.ts`, `auth.controller.ts`).
   - **Component naming:** PascalCase (e.g., `DashboardCard`).
   - **Variable naming:** camelCase (e.g., `attendanceCount`, `studentData`).
   - **Function naming:** camelCase, action-oriented (e.g., `fetchAttendance`, `generatePDF`).
 - **Import ordering:** Built-in node modules -> External dependencies -> Internal absolute imports -> Internal relative imports.
-- **Error handling rules:** 
+- **Error handling rules:**
   - Backend: Use central error handling middleware. Throw custom API errors. Never leak stack traces in production.
   - Frontend: Use try/catch in async functions. Show user-friendly toast/alerts via UI.
 - **Logging rules:** Use a logger utility (not just `console.log` for backend in production). Log important events (login, errors).
@@ -1293,6 +1460,7 @@ This section enforces absolute operational parameters and decision-making rules 
 ### Core Mandates
 
 #### AI MUST:
+
 - **Read `AGENT.md` first**: Prioritize reading this document entirely before analyzing source files or writing single lines of code.
 - **Reuse existing modules**: Always search for existing utilities, services, helper routines, and style configurations before writing custom logic.
 - **Respect architecture**: Adhere strictly to the structured Model-Service-Controller-Route schema boundaries.
@@ -1306,6 +1474,7 @@ This section enforces absolute operational parameters and decision-making rules 
 - **Keep controller thin**: Controllers must strictly handle HTTP transport details; delegate all database queries to the service layers.
 
 #### AI MUST NOT:
+
 - **Put DB logic in controllers**: Never import Mongoose models, execute database reads, writes, updates, or aggregates inside controllers.
 - **Skip validators**: Every mutate transaction (POST, PUT, PATCH) must be validated via a Zod schema in the `validators/` layer.
 - **Duplicate components**: Do not build custom button components or input cards if standard components exist in the design system.
@@ -1327,7 +1496,7 @@ graph TD
     A["1. Architecture Layer"] --> B["2. Folder Ownership Layer"]
     B --> C["3. Existing Patterns Layer"]
     C --> D["4. New Implementation Layer"]
-    
+
     style A fill:#0A192F,stroke:#00D4FF,stroke-width:2px,color:#fff
     style B fill:#0A192F,stroke:#00D4FF,stroke-width:2px,color:#fff
     style C fill:#0A192F,stroke:#00D4FF,stroke-width:2px,color:#fff
@@ -1372,20 +1541,20 @@ npm run dev
 
 ### URLs
 
-| Service | URL |
-| :--- | :--- |
-| Frontend (Vite) | http://localhost:5173 |
-| Backend health (local npm) | http://localhost:5001/health |
-| Backend health (Docker full stack) | http://localhost:5000/health |
-| Admin timetable | http://localhost:5173/admin/timetable (login as **admin**) |
-| Mongo Express | http://localhost:8081 (only if full stack or mongo-express is running) |
+| Service                            | URL                                                                    |
+| :--------------------------------- | :--------------------------------------------------------------------- |
+| Frontend (Vite)                    | http://localhost:5173                                                  |
+| Backend health (local npm)         | http://localhost:5001/health                                           |
+| Backend health (Docker full stack) | http://localhost:5000/health                                           |
+| Admin timetable                    | http://localhost:5173/admin/timetable (login as **admin**)             |
+| Mongo Express                      | http://localhost:8081 (only if full stack or mongo-express is running) |
 
 ### Dev scripts (`scripts/`)
 
-| Script | Purpose |
-| :--- | :--- |
-| `start-mongo.ps1` | Starts `docker-compose.mongo.yml` (MongoDB container on `27017`). |
-| `free-port.ps1` | Frees port **5001** by stopping **Node only** (skips Docker/WSL). Optional `-Port 5000 -Force` — avoid; can break Docker. |
+| Script            | Purpose                                                                                                                   |
+| :---------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| `start-mongo.ps1` | Starts `docker-compose.mongo.yml` (MongoDB container on `27017`).                                                         |
+| `free-port.ps1`   | Frees port **5001** by stopping **Node only** (skips Docker/WSL). Optional `-Port 5000 -Force` — avoid; can break Docker. |
 
 ### API proxy (Vite)
 
@@ -1410,37 +1579,37 @@ docker exec -it sams-backend npm run seed
 
 ### MongoDB `ECONNREFUSED` on 27017
 
-| Cause | Fix |
-| :--- | :--- |
-| **MongoDB not running** | Start Docker Desktop, then `.\scripts\start-mongo.ps1` from project root, or start Windows **MongoDB Server** service. |
-| **Docker stopped** | `docker compose -f docker-compose.mongo.yml up -d` — use **mongo-only** compose, not full stack, when developing with `npm run dev`. |
-| **IPv6 localhost** | Use `MONGO_URI=mongodb://127.0.0.1:27017/attendance_system` in `backend/.env` (not `localhost`). |
+| Cause                   | Fix                                                                                                                                  |
+| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **MongoDB not running** | Start Docker Desktop, then `.\scripts\start-mongo.ps1` from project root, or start Windows **MongoDB Server** service.               |
+| **Docker stopped**      | `docker compose -f docker-compose.mongo.yml up -d` — use **mongo-only** compose, not full stack, when developing with `npm run dev`. |
+| **IPv6 localhost**      | Use `MONGO_URI=mongodb://127.0.0.1:27017/attendance_system` in `backend/.env` (not `localhost`).                                     |
 
 ### Port 5001 already in use (local backend won’t start)
 
-| Cause | Fix |
-| :--- | :--- |
-| **Old `npm run dev` still running** | From project root: `.\scripts\free-port.ps1` (default port **5001**, Node only). |
-| **Wrong PORT in `.env`** | Local dev should use `PORT=5001` in `backend/.env`. Docker uses `5000` inside `docker-compose.yml`. |
-| **Killed Docker by mistake** | Never run `free-port.ps1 -Port 5000` without `-Force`; default script skips Docker. Restart Docker Desktop and `.\scripts\start-mongo.ps1`. |
+| Cause                               | Fix                                                                                                                                         |
+| :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Old `npm run dev` still running** | From project root: `.\scripts\free-port.ps1` (default port **5001**, Node only).                                                            |
+| **Wrong PORT in `.env`**            | Local dev should use `PORT=5001` in `backend/.env`. Docker uses `5000` inside `docker-compose.yml`.                                         |
+| **Killed Docker by mistake**        | Never run `free-port.ps1 -Port 5000` without `-Force`; default script skips Docker. Restart Docker Desktop and `.\scripts\start-mongo.ps1`. |
 
 ### Vite proxy / API errors (login or timetable fails)
 
-| Cause | Fix |
-| :--- | :--- |
-| **Proxy points to wrong port** | Ensure `frontend/.env.development` has `VITE_API_PROXY_TARGET=http://localhost:5001` and **restart** `npm run dev` in `frontend/`. |
-| **Backend on 5000, proxy on 5001** | Align both: `backend/.env` → `PORT=5001`, restart backend. |
+| Cause                              | Fix                                                                                                                                |
+| :--------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| **Proxy points to wrong port**     | Ensure `frontend/.env.development` has `VITE_API_PROXY_TARGET=http://localhost:5001` and **restart** `npm run dev` in `frontend/`. |
+| **Backend on 5000, proxy on 5001** | Align both: `backend/.env` → `PORT=5001`, restart backend.                                                                         |
 
 ### `/admin/timetable` shows "Route not found"
 
 This message is returned by the **Express** API (`app.ts` 404 handler), not React Router. The page route is valid; the failing call is usually `GET /api/admin/timetable/overview`.
 
-| Cause | Fix |
-| :--- | :--- |
-| **Stale API on port 5000** | That is the **Docker** backend. Local Vite uses **5001** — run `npm run dev` in `backend/` and hit `http://localhost:5001/health`. |
-| **PORT mismatch** | Backend `PORT` and `VITE_API_PROXY_TARGET` must match (default **5001**). Restart both servers after edits. |
+| Cause                      | Fix                                                                                                                                                   |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Stale API on port 5000** | That is the **Docker** backend. Local Vite uses **5001** — run `npm run dev` in `backend/` and hit `http://localhost:5001/health`.                    |
+| **PORT mismatch**          | Backend `PORT` and `VITE_API_PROXY_TARGET` must match (default **5001**). Restart both servers after edits.                                           |
 | **Frontend compile error** | Invalid JSX in `AdminTimetable.tsx` prevents the route from loading; check the Vite terminal for parse errors and restart `npm run dev` after fixing. |
-| **Not logged in as admin** | Timetable is admin-only. Use `ADMIN001` / `Admin@123` with role **admin**. |
+| **Not logged in as admin** | Timetable is admin-only. Use `ADMIN001` / `Admin@123` with role **admin**.                                                                            |
 
 **Verify API:** `GET http://localhost:5001/health` then `GET http://localhost:5001/api/admin/timetable/overview` (with admin JWT) should succeed, not `{ message: "Route not found" }`.
 
@@ -1451,6 +1620,7 @@ This message is returned by the **Express** API (`app.ts` 404 handler), not Reac
 **Daily local run:** See [Local Development (Recommended)](#local-development-recommended). Confirm MongoDB on `27017`, backend on **`5001`**, Vite on `5173`.
 
 **Feature creation process:**
+
 1. **Requirement:** Read the goal (e.g., "Add Subject creation for Admins").
 2. **Planning:** Identify necessary backend routes, models, and frontend pages.
 3. **Folder placement:** Navigate to `/backend/src/` and `/frontend/src/` respectfully.
@@ -1461,12 +1631,14 @@ This message is returned by the **Express** API (`app.ts` 404 handler), not Reac
 8. **Final integration:** Build docker containers to test the production setup via `docker-compose up --build`.
 
 ## Final Product Vision
+
 - **Visuals (UI expectations):** The product must scream "premium". Heavy use of dark mode (`bg-slate-900` / deep navy), glowing accents (neon blue `#00D4FF`, cyan, crimson for alerts), and glassmorphism (backdrop blurs). UI components should feel modern, asynchronous, and non-blocking.
 - **Behavior (UX expectations):** Role boundaries should be completely transparent but fully enforced. Navigation should be instant (SPA). Forms should have instant validation feedback.
 - **Performance expectations:** API calls should be lightweight. Dashboards should load quickly using aggregated data. The "75% rule" calculations should be near-instant on the backend.
 - **Scalability expectations:** The system should comfortably handle hundreds of concurrent users clocking in. The Dockerized architecture must allow for easy vertical/horizontal scaling of the Node instance.
 
 ## Future Roadmap
+
 - **Planned modules:** Payroll integration, Real-time WebSockets for live attendance tracking.
 - **Scaling plans:** Migrating from single MongoDB container to MongoDB Atlas, implementing Redis for caching timetable/dashboard queries.
 - **Optimization targets:** React performance optimization (memoization), database index tuning for reporting.
@@ -1479,6 +1651,7 @@ This section provides an immediate high-level summary of implemented features ve
 ---
 
 ### 1. Attendance Tracking
+
 - **Current State**:
   - The Mongoose models, routing endpoints (`POST /api/teacher/attendance/mark`), and cohort schemas are fully operational.
   - The teacher marking view roster UI checklist layout is implemented.
@@ -1491,6 +1664,7 @@ This section provides an immediate high-level summary of implemented features ve
   - Hardware integration endpoints, socket connections, and device authentication middleware are yet to be designed.
 
 ### 2. Dashboard & Performance Analytics
+
 - **Current State**:
   - Read-only Teacher Dashboard V2 is fully completed, featuring a responsive cyberpunk layout.
   - The top section displays an immutable, current Date card and a live-updating IST clock card (`HH:mm:ss IST`).
@@ -1503,6 +1677,7 @@ This section provides an immediate high-level summary of implemented features ve
   - Interactive analysis console React Recharts charts need active Mongoose aggregates integration to render class averages.
 
 ### 3. Notifications & Announcement Broadcast
+
 - **Current State**:
   - Admin composer at `/admin/notifications` with Global / Student / Teacher targeting, department-filtered recipient lists, Zod validation (`notification.validator.ts`), and teacher inbox API (`GET /api/teacher/notifications`).
 - **Target State**:
@@ -1513,6 +1688,7 @@ This section provides an immediate high-level summary of implemented features ve
   - State synchronization loops mapping read/unread message parameters on the client store are under development.
 
 ### 4. Authentication & Security
+
 - **Current State**:
   - Fully functional custom JWT auth strategy integrated with Bcrypt hashing on the server.
   - Client state local storage persistence handled via Zustand store slices.
@@ -1522,6 +1698,7 @@ This section provides an immediate high-level summary of implemented features ve
   - Token refresh endpoint, silent silent renewal Axios interceptors, and HttpOnly cookie cookie storage mechanisms are under development.
 
 ### 5. Docker Orchestration Environment
+
 - **Current State**:
   - A working Docker Compose orchestrator running isolated frontend, backend, MongoDB, and Mongo-Express containers with live code reload.
 - **Target State**:
@@ -1530,6 +1707,7 @@ This section provides an immediate high-level summary of implemented features ve
   - Production-ready Multi-Stage Dockerfiles and static Nginx server blocks config mapping are not finished.
 
 ### 6. Mobile Support
+
 - **Current State**:
   - Fully responsive desktop and mobile browser UI layouts adapting automatically to viewport sizes.
 - **Target State**:
@@ -1538,6 +1716,7 @@ This section provides an immediate high-level summary of implemented features ve
   - Separate React Native repository workspace and native client connection services do not exist.
 
 ### 7. Admin Student & Teacher Management Portals
+
 - **Current State**:
   - Dedicated `/admin/students`, `/admin/teachers`, and `/admin/timetable` routes with Academic Intelligence (Stitch) theme.
   - Filters: department (including All), semester (1/3/5/7), search.
@@ -1552,6 +1731,7 @@ This section provides an immediate high-level summary of implemented features ve
 ## AI Context Summary
 
 **Quick AI Understanding**
+
 - **What the project is:** A full-stack, Dockerized Node/React ERP system for managing educational attendance (Admin, Teacher, Student workflows).
 - **How folders work:** Backend: `controllers` → `services` → `models`. Frontend: `pages` orchestrate; `components/{atoms,molecules,organisms,templates}` for UI; admin uses `AdminStitchLayout`, student/teacher use `AppLayout` (Neo-Shinjuku).
 - **Architecture:** Node.js/Express (Backend) + React/Vite (Frontend) + MongoDB. Connected via REST API and JWT Auth.
@@ -1571,12 +1751,12 @@ This section provides an immediate high-level summary of implemented features ve
 
 ### Faculty table columns (current)
 
-| Column | Description |
-| :--- | :--- |
-| **Teacher** | Full name + email from `TeacherProfile` → `User`. |
+| Column      | Description                                                                                    |
+| :---------- | :--------------------------------------------------------------------------------------------- |
+| **Teacher** | Full name + email from `TeacherProfile` → `User`.                                              |
 | **Subject** | Subject name + code for the row (one row per teacher–subject pair in the selected department). |
-| **Present** | Count of attendance records with status `present` or `late` for that teacher and subject. |
-| **Absent** | Count of attendance records with status `absent` for that teacher and subject. |
+| **Present** | Count of attendance records with status `present` or `late` for that teacher and subject.      |
+| **Absent**  | Count of attendance records with status `absent` for that teacher and subject.                 |
 
 **Removed (not in product scope):** Workload hours/percent, star ratings.
 
@@ -1642,16 +1822,16 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 
 ### Features
 
-| Feature | Behavior |
-| :--- | :--- |
-| **Department filter** | Dropdown lists all departments plus **All Departments** (default). Empty `departmentId` returns every active student. |
-| **Semester filter** | **All Semesters** or **1 / 3 / 5 / 7** — filters `StudentProfile.semester`. Seed data distributes 50 students evenly across these semesters. |
-| **Search** | Filters by name, uni/roll number, login `userId`, or email (debounced 300ms). Default load shows **all** students matching the department filter. |
-| **Table** | Two rows per subject (**Present** / **Absent** counts). **Semester** shown on every row. Columns: Uni No, Name, Semester, Section, Subject, Total, Attendance, Count, **Actions** (Remove on first row per student). |
-| **Add Student** | Toolbar → `AddStudentModal` → `POST /api/admin/student/create`. Requires a **specific** department (not All). Fields: full name, login ID, roll number, email, password, semester (1/3/5/7), section (A–D). |
-| **Remove** | **Remove** on first row per student → `DELETE /api/admin/student/:id` (User `_id`, soft-deactivates account). |
-| **Chart** | Recharts bar graph below the table — aggregated **Present** vs **Absent** for the currently filtered student set (`StudentAttendanceChart`). |
-| **Download** | **Download CSV Report** at the bottom of the table. |
+| Feature               | Behavior                                                                                                                                                                                                             |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Department filter** | Dropdown lists all departments plus **All Departments** (default). Empty `departmentId` returns every active student.                                                                                                |
+| **Semester filter**   | **All Semesters** or **1 / 3 / 5 / 7** — filters `StudentProfile.semester`. Seed data distributes 50 students evenly across these semesters.                                                                         |
+| **Search**            | Filters by name, uni/roll number, login `userId`, or email (debounced 300ms). Default load shows **all** students matching the department filter.                                                                    |
+| **Table**             | Two rows per subject (**Present** / **Absent** counts). **Semester** shown on every row. Columns: Uni No, Name, Semester, Section, Subject, Total, Attendance, Count, **Actions** (Remove on first row per student). |
+| **Add Student**       | Toolbar → `AddStudentModal` → `POST /api/admin/student/create`. Requires a **specific** department (not All). Fields: full name, login ID, roll number, email, password, semester (1/3/5/7), section (A–D).          |
+| **Remove**            | **Remove** on first row per student → `DELETE /api/admin/student/:id` (User `_id`, soft-deactivates account).                                                                                                        |
+| **Chart**             | Recharts bar graph below the table — aggregated **Present** vs **Absent** for the currently filtered student set (`StudentAttendanceChart`).                                                                         |
+| **Download**          | **Download CSV Report** at the bottom of the table.                                                                                                                                                                  |
 
 ### API: student attendance overview
 
@@ -1672,7 +1852,13 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
       "semester": 5,
       "section": "A",
       "subjects": [
-        { "subjectName": "Database Systems", "subjectCode": "CS-302", "present": 12, "absent": 2, "total": 14 }
+        {
+          "subjectName": "Database Systems",
+          "subjectCode": "CS-302",
+          "present": 12,
+          "absent": 2,
+          "total": 14
+        }
       ],
       "totals": { "present": 12, "absent": 2, "total": 14 }
     }
@@ -1690,21 +1876,21 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 
 ### Atomic components (students tab)
 
-| Layer | Component |
-| :--- | :--- |
-| Molecule | `DepartmentFilterSelect` (includes “All Departments”) |
+| Layer    | Component                                                |
+| :------- | :------------------------------------------------------- |
+| Molecule | `DepartmentFilterSelect` (includes “All Departments”)    |
 | Molecule | `SemesterFilterSelect` (All / 1–8; seed uses 1, 3, 5, 7) |
-| Molecule | `SearchField` |
-| Organism | `StudentOverviewTable` |
-| Organism | `StudentAttendanceChart` |
-| Organism | `AddStudentModal` |
+| Molecule | `SearchField`                                            |
+| Organism | `StudentOverviewTable`                                   |
+| Organism | `StudentAttendanceChart`                                 |
+| Organism | `AddStudentModal`                                        |
 
 ### API: create / remove student
 
-| Method | Path | Validator | Purpose |
-| :--- | :--- | :--- | :--- |
-| POST | `/student/create` | `createStudentSchema` in `admin.validator.ts` | New student user + profile |
-| DELETE | `/student/:id` | — | Soft-deactivate student (`User._id`) |
+| Method | Path              | Validator                                     | Purpose                              |
+| :----- | :---------------- | :-------------------------------------------- | :----------------------------------- |
+| POST   | `/student/create` | `createStudentSchema` in `admin.validator.ts` | New student user + profile           |
+| DELETE | `/student/:id`    | —                                             | Soft-deactivate student (`User._id`) |
 
 **Create body:**
 
@@ -1732,15 +1918,15 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 
 ### Features
 
-| Feature | Behavior |
-| :--- | :--- |
-| **Department filter** | **All Departments** (default, shows every dept) or one dept. Assign requires a **specific** department (not All). |
-| **Semester filter** | All Semesters or **1 / 3 / 5 / 7** — filters rows by `Subject.semester` on each assignment. |
-| **Search** | Name, employee ID (`employeeId`), login `userId`, or email. |
-| **Table** | One row per teacher–subject: Unique ID (`employeeId`), Teacher Name, Email, Date Assigned (`TeacherProfile.createdAt`), Subject, Department, Semester. |
-| **Assign New Teacher** | Opens `AssignTeacherModal` — requires a **specific** department (not All Departments). `POST /api/admin/teacher/create`; subjects from `GET /api/admin/subjects?departmentId=&semester=`. |
-| **Remove Teacher** | **Remove** on the first row of each teacher — `DELETE /api/admin/teacher/:profileId` (soft-deactivates `User.isActive`). |
-| **All Departments filter** | Empty `departmentId` returns teachers from **all** departments (no auto-select to first dept). |
+| Feature                    | Behavior                                                                                                                                                                                  |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Department filter**      | **All Departments** (default, shows every dept) or one dept. Assign requires a **specific** department (not All).                                                                         |
+| **Semester filter**        | All Semesters or **1 / 3 / 5 / 7** — filters rows by `Subject.semester` on each assignment.                                                                                               |
+| **Search**                 | Name, employee ID (`employeeId`), login `userId`, or email.                                                                                                                               |
+| **Table**                  | One row per teacher–subject: Unique ID (`employeeId`), Teacher Name, Email, Date Assigned (`TeacherProfile.createdAt`), Subject, Department, Semester.                                    |
+| **Assign New Teacher**     | Opens `AssignTeacherModal` — requires a **specific** department (not All Departments). `POST /api/admin/teacher/create`; subjects from `GET /api/admin/subjects?departmentId=&semester=`. |
+| **Remove Teacher**         | **Remove** on the first row of each teacher — `DELETE /api/admin/teacher/:profileId` (soft-deactivates `User.isActive`).                                                                  |
+| **All Departments filter** | Empty `departmentId` returns teachers from **all** departments (no auto-select to first dept).                                                                                            |
 
 ### API: teacher assignments overview
 
@@ -1770,11 +1956,11 @@ Admin routes use the **Academic Intelligence** light glass theme from Stitch (`A
 
 ### Atomic components (teachers tab)
 
-| Layer | Component |
-| :--- | :--- |
-| Molecule | `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField` |
+| Layer    | Component                                                                   |
+| :------- | :-------------------------------------------------------------------------- |
+| Molecule | `DepartmentFilterSelect`, `SemesterFilterSelect`, `SearchField`             |
 | Organism | `TeacherAssignmentsTable` (**Assign New Teacher**, **Remove** per lecturer) |
-| Organism | `AssignTeacherModal` (shared with Department Dashboard) |
+| Organism | `AssignTeacherModal` (shared with Department Dashboard)                     |
 
 ### API: remove teacher
 
@@ -1797,28 +1983,28 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 ### Table columns
 
-| Column | Description |
-| :--- | :--- |
-| **UID** | Slot code `TT-{last6OfMongoId}` (unique per timetable entry). |
-| **Teacher** | Full name + login `userId` (e.g. `TCH001`). |
-| **Subject** | Subject name + code. |
-| **Department** | Department name for the slot. |
-| **Section** | Cohort section (`A`–`D`). |
-| **Semester** | Academic semester (1–8; seed uses 1, 3, 5, 7). |
-| **Timing** | `Day · HH:MM–HH:MM · Room {roomNo}` (room shown as subline under timing). |
+| Column         | Description                                                               |
+| :------------- | :------------------------------------------------------------------------ |
+| **UID**        | Slot code `TT-{last6OfMongoId}` (unique per timetable entry).             |
+| **Teacher**    | Full name + login `userId` (e.g. `TCH001`).                               |
+| **Subject**    | Subject name + code.                                                      |
+| **Department** | Department name for the slot.                                             |
+| **Section**    | Cohort section (`A`–`D`).                                                 |
+| **Semester**   | Academic semester (1–8; seed uses 1, 3, 5, 7).                            |
+| **Timing**     | `Day · HH:MM–HH:MM · Room {roomNo}` (room shown as subline under timing). |
 
 **Removed from table UI:** **Status** (`Published`/`Draft`) and **Actions** (row Edit/Delete). `isPublished` is still returned by the overview API and used by publish flow.
 
 ### Features
 
-| Feature | Behavior |
-| :--- | :--- |
-| **Department filter** | **All Departments** or one department. Add/publish require a **specific** department. |
-| **Semester filter** | All or **1–8**. |
-| **Section filter** | All or **A / B / C / D**. |
-| **Search** | UID, teacher login, name, subject, department, section, timing. |
-| **Add Slot** | Toolbar or table header → `TimetableSlotModal` → `POST /api/admin/timetable/create`. |
-| **Publish Cohort** | Toolbar → `PUT /api/admin/timetable/publish` with `{ departmentId, semester, section }` — sets `isPublished: true` for matching slots. |
+| Feature               | Behavior                                                                                                                               |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| **Department filter** | **All Departments** or one department. Add/publish require a **specific** department.                                                  |
+| **Semester filter**   | All or **1–8**.                                                                                                                        |
+| **Section filter**    | All or **A / B / C / D**.                                                                                                              |
+| **Search**            | UID, teacher login, name, subject, department, section, timing.                                                                        |
+| **Add Slot**          | Toolbar or table header → `TimetableSlotModal` → `POST /api/admin/timetable/create`.                                                   |
+| **Publish Cohort**    | Toolbar → `PUT /api/admin/timetable/publish` with `{ departmentId, semester, section }` — sets `isPublished: true` for matching slots. |
 
 **Not in UI (API only):** `PUT /api/admin/timetable/:id` (update slot), `DELETE /api/admin/timetable/:id` (remove slot). `TimetableSlotModal` still supports edit mode if `editRow` is passed, but no table control sets it.
 
@@ -1860,12 +2046,12 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 ### API: create / update / delete / publish
 
-| Method | Path | Validator | Purpose |
-| :--- | :--- | :--- | :--- |
-| POST | `/timetable/create` | `createTimetableSchema` | New slot |
-| PUT | `/timetable/:id` | `updateTimetableSchema` | Update slot fields |
-| DELETE | `/timetable/:id` | — | Remove slot |
-| PUT | `/timetable/publish` | `publishTimetableSchema` (body) | Publish cohort |
+| Method | Path                 | Validator                       | Purpose            |
+| :----- | :------------------- | :------------------------------ | :----------------- |
+| POST   | `/timetable/create`  | `createTimetableSchema`         | New slot           |
+| PUT    | `/timetable/:id`     | `updateTimetableSchema`         | Update slot fields |
+| DELETE | `/timetable/:id`     | —                               | Remove slot        |
+| PUT    | `/timetable/publish` | `publishTimetableSchema` (body) | Publish cohort     |
 
 **Create body** (same as existing timetable model):
 
@@ -1885,10 +2071,10 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 ### Atomic components (timetable tab)
 
-| Layer | Component |
-| :--- | :--- |
+| Layer    | Component                                                                              |
+| :------- | :------------------------------------------------------------------------------------- |
 | Molecule | `DepartmentFilterSelect`, `SemesterFilterSelect`, `SectionFilterSelect`, `SearchField` |
-| Organism | `TimetableOverviewTable`, `TimetableSlotModal` |
+| Organism | `TimetableOverviewTable`, `TimetableSlotModal`                                         |
 
 ---
 
@@ -1896,25 +2082,25 @@ See [Assign New Teacher (faculty table)](#assign-new-teacher-faculty-table). Tea
 
 **Script:** `backend/scripts/seed.ts` — run `npm run seed` from `backend/` (requires MongoDB).
 
-| Entity | Distribution |
-| :--- | :--- |
+| Entity            | Distribution                                                                                          |
+| :---------------- | :---------------------------------------------------------------------------------------------------- |
 | **Subjects (CS)** | 15 courses across semesters **1, 3, 5, 7** (e.g. CS101 sem 1, CS201 sem 3, CS501 sem 5, CS701 sem 7). |
-| **Subjects (IT)** | 4 courses across semesters **1, 3, 5, 7**. |
-| **Students (50)** | Rotating `semester` **1 → 3 → 5 → 7** (~13 per semester); all CS department; sections A/B/C. |
-| **Teachers (12)** | Assigned to subjects matching their semester; CS + IT departments. |
-| **Timetable** | Slots per semester × section × subject. |
-| **Attendance** | Last 30 weekdays generated per timetable slot for matching student cohort. |
+| **Subjects (IT)** | 4 courses across semesters **1, 3, 5, 7**.                                                            |
+| **Students (50)** | Rotating `semester` **1 → 3 → 5 → 7** (~13 per semester); all CS department; sections A/B/C.          |
+| **Teachers (12)** | Assigned to subjects matching their semester; CS + IT departments.                                    |
+| **Timetable**     | Slots per semester × section × subject.                                                               |
+| **Attendance**    | Last 30 weekdays generated per timetable slot for matching student cohort.                            |
 
 **Demo logins after seed:**
 
-| Role | userId | Password | Notes |
-| :--- | :--- | :--- | :--- |
-| Admin | `ADMIN001` | `Admin@123` | Marcus Hale |
-| Teacher | `TCH001` | `Teacher@123` | Amit Patel |
-| Student | `STU001` | `Student@123` | Semester **1** |
-| Student | `STU002` | `Student@123` | Semester **3** |
-| Student | `STU003` | `Student@123` | Semester **5** |
-| Student | `STU004` | `Student@123` | Semester **7** |
+| Role    | userId     | Password      | Notes          |
+| :------ | :--------- | :------------ | :------------- |
+| Admin   | `ADMIN001` | `Admin@123`   | Marcus Hale    |
+| Teacher | `TCH001`   | `Teacher@123` | Amit Patel     |
+| Student | `STU001`   | `Student@123` | Semester **1** |
+| Student | `STU002`   | `Student@123` | Semester **3** |
+| Student | `STU003`   | `Student@123` | Semester **5** |
+| Student | `STU004`   | `Student@123` | Semester **7** |
 
 Use **Semester** filter on `/admin/students` and `/admin/teachers` to view each cohort.
 
@@ -1928,10 +2114,10 @@ Use **Semester** filter on `/admin/students` and `/admin/teachers` to view each 
 
 ### Form fields
 
-| Field | Description |
-| :--- | :--- |
-| **Title** | Notification headline (required). |
-| **Message** | Body text (required). |
+| Field       | Description                                                                   |
+| :---------- | :---------------------------------------------------------------------------- |
+| **Title**   | Notification headline (required).                                             |
+| **Message** | Body text (required).                                                         |
 | **Send to** | **Global** — all users; **Student** — one student; **Teacher** — one teacher. |
 
 ### Individual targeting (Student / Teacher)
@@ -1976,28 +2162,29 @@ Individual example:
 }
 ```
 
-| `targetType` | `targetId` | Recipients |
-| :--- | :--- | :--- |
-| `all` | omitted | Every student and teacher |
-| `student` | User `_id` | That student only |
-| `teacher` | User `_id` | That teacher only |
+| `targetType` | `targetId` | Recipients                |
+| :----------- | :--------- | :------------------------ |
+| `all`        | omitted    | Every student and teacher |
+| `student`    | User `_id` | That student only         |
+| `teacher`    | User `_id` | That teacher only         |
 
 ---
 
 ## Document Index (Admin & Data)
 
-| Section | Topics |
-| :--- | :--- |
-| [Local Development (Recommended)](#local-development-recommended) | Hybrid npm + MongoDB Docker, scripts, URLs |
-| [Local Dev Troubleshooting](#local-dev-troubleshooting) | MongoDB 27017, ports 5001/5000, Vite proxy |
-| [Admin Navigation Domain](#admin-navigation-domain) | Routes `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications` |
-| [Admin Timetable Tab](#admin-timetable-tab--schedule-management) | 7-column table, add, publish |
-| [Admin Notifications Tab](#admin-notifications-tab--broadcast-composer) | Global / student / teacher, department picker |
-| [Admin Department Dashboard](#admin-department-dashboard-stitch-ui--faculty-table) | Faculty table, assign from dept view |
-| [Admin Students Tab](#admin-students-tab--student-details-overview) | Add/remove, Present/Absent rows, CSV |
-| [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview) | Assign, Remove, All Departments |
-| [Seed Data](#seed-data--multi-semester-distribution) | Semesters 1/3/5/7, `npm run seed` |
-| [Admin API Route Map](#admin-api-route-map-backendsrcroutesadminroutests) | Full REST table |
+| Section                                                                            | Topics                                                                                       |
+| :--------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| [Local Development (Recommended)](#local-development-recommended)                  | Hybrid npm + MongoDB Docker, scripts, URLs                                                   |
+| [Local Dev Troubleshooting](#local-dev-troubleshooting)                            | MongoDB 27017, ports 5001/5000, Vite proxy                                                   |
+| [Admin Navigation Domain](#admin-navigation-domain)                                | Routes `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications` |
+| [Admin Timetable Tab](#admin-timetable-tab--schedule-management)                   | 7-column table, add, publish                                                                 |
+| [Admin Notifications Tab](#admin-notifications-tab--broadcast-composer)            | Global / student / teacher, department picker                                                |
+| [Admin Department Dashboard](#admin-department-dashboard-stitch-ui--faculty-table) | Faculty table, assign from dept view                                                         |
+| [Admin Students Tab](#admin-students-tab--student-details-overview)                | Add/remove, Present/Absent rows, CSV                                                         |
+| [Admin Teachers Tab](#admin-teachers-tab--teacher-assignments-overview)            | Assign, Remove, All Departments                                                              |
+| [Seed Data](#seed-data--multi-semester-distribution)                               | Semesters 1/3/5/7, `npm run seed`                                                            |
+| [Admin API Route Map](#admin-api-route-map-backendsrcroutesadminroutests)          | Full REST table                                                                              |
+
 ## Teacher Module V2 — Mark Attendance Redesign
 
 > This section was added after the Mark Attendance redesign and context-recovery workflow. It documents all new architecture, pending integrations, and AI continuation guidelines for the Teacher attendance module.
@@ -2017,14 +2204,14 @@ Teacher
 
 #### Module Status Overview
 
-| Module             | Status              |
-| :----------------- | :------------------ |
-| Dashboard redesign | 🚧 In Progress      |
-| Mark Attendance    | 🚧 Partially Implemented |
-| Analysis           | 🚧 In Progress      |
-| Database integration | ❌ Deferred        |
-| Attendance persistence | ❌ Deferred     |
-| Realtime sync      | 📌 Pending          |
+| Module                 | Status                   |
+| :--------------------- | :----------------------- |
+| Dashboard redesign     | 🚧 In Progress           |
+| Mark Attendance        | 🚧 Partially Implemented |
+| Analysis               | 🚧 In Progress           |
+| Database integration   | ❌ Deferred              |
+| Attendance persistence | ❌ Deferred              |
+| Realtime sync          | 📌 Pending               |
 
 ---
 
@@ -2041,12 +2228,12 @@ Teacher
 
 **Filter Fields:**
 
-| Field      | Type     | Rules                                  |
-| :--------- | :------- | :------------------------------------- |
-| Department | Select   | Populated from `/teacher/attendance/departments` |
-| Section    | Select   | Populated from `/teacher/attendance/sections`    |
-| Semester   | Select   | Populated from `/teacher/attendance/semesters`   |
-| Subject    | Select   | Populated from `/teacher/attendance/subjects`    |
+| Field      | Type     | Rules                                                        |
+| :--------- | :------- | :----------------------------------------------------------- |
+| Department | Select   | Populated from `/teacher/attendance/departments`             |
+| Section    | Select   | Populated from `/teacher/attendance/sections`                |
+| Semester   | Select   | Populated from `/teacher/attendance/semesters`               |
+| Subject    | Select   | Populated from `/teacher/attendance/subjects`                |
 | Date       | Readonly | Auto-set to current date. Format: `DD MMM YYYY`, IST locked. |
 
 **Action:** `Synchronize Roster` button — triggers `POST /teacher/attendance/students`.
@@ -2065,22 +2252,22 @@ Mobile   → stacked
 
 **Columns:**
 
-| Column           | Source Field    |
-| :--------------- | :-------------- |
-| University Roll  | `universityRoll` |
-| Class Roll No    | `classRoll`      |
-| Student Name     | `studentName`    |
-| Status           | `attendanceData[studentId]` |
+| Column          | Source Field                |
+| :-------------- | :-------------------------- |
+| University Roll | `universityRoll`            |
+| Class Roll No   | `classRoll`                 |
+| Student Name    | `studentName`               |
+| Status          | `attendanceData[studentId]` |
 
 **Allowed Status Values:** `present` | `absent` | `late`
 
 **Status UI (Glow Chips):**
 
-| Status  | Color        | Glow Shadow                        |
-| :------ | :----------- | :--------------------------------- |
-| Present | Emerald 400  | `shadow-[0_0_15px_rgba(16,185,129,0.3)]` |
-| Absent  | Rose 400     | `shadow-[0_0_15px_rgba(244,63,94,0.3)]`  |
-| Late    | Amber 400    | `shadow-[0_0_15px_rgba(245,158,11,0.3)]` |
+| Status  | Color       | Glow Shadow                              |
+| :------ | :---------- | :--------------------------------------- |
+| Present | Emerald 400 | `shadow-[0_0_15px_rgba(16,185,129,0.3)]` |
+| Absent  | Rose 400    | `shadow-[0_0_15px_rgba(244,63,94,0.3)]`  |
+| Late    | Amber 400   | `shadow-[0_0_15px_rgba(245,158,11,0.3)]` |
 
 **Responsive Layout:**
 
@@ -2120,9 +2307,9 @@ Mobile  → grid of cards (grid-cols-1 md:grid-cols-2)
 
 **Current implementation target:**
 
-| Property | Value |
-| :--- | :--- |
-| **Route** | `/teacher/attendance` |
+| Property       | Value                                      |
+| :------------- | :----------------------------------------- |
+| **Route**      | `/teacher/attendance`                      |
 | **Page owner** | `frontend/src/pages/TeacherAttendance.tsx` |
 
 #### Screen Structure
@@ -2167,22 +2354,22 @@ TeacherAttendancePage
 
 #### Student Registry Table V2
 
-| Column | Source Field |
-| :--- | :--- |
-| University Roll | `universityRoll` |
-| Class Roll No | `classRoll` |
-| Student Name | `studentName` |
-| Status | `attendanceData[studentId]` |
+| Column          | Source Field                |
+| :-------------- | :-------------------------- |
+| University Roll | `universityRoll`            |
+| Class Roll No   | `classRoll`                 |
+| Student Name    | `studentName`               |
+| Status          | `attendanceData[studentId]` |
 
 **Status values:** `present` | `absent` | `late`
 
 **Visual rules:**
 
-| Status | Style |
-| :--- | :--- |
+| Status  | Style        |
+| :------ | :----------- |
 | Present | Emerald glow |
-| Absent | Rose glow |
-| Late | Amber glow |
+| Absent  | Rose glow    |
+| Late    | Amber glow   |
 
 **Layout:**
 
@@ -2224,20 +2411,20 @@ Mobile  → Card layout (grid-cols-1 md:grid-cols-2)
 
 **Sections:**
 
-| Section | Card tone | Display format |
-| :--- | :--- | :--- |
+| Section          | Card tone    | Display format |
+| :--------------- | :----------- | :------------- |
 | Present Students | Emerald card | ✓ Student Name |
-| Absent Students | Rose card | ✕ Student Name |
-| Late Students | Amber card | • Student Name |
+| Absent Students  | Rose card    | ✕ Student Name |
+| Late Students    | Amber card   | • Student Name |
 
 #### Attendance Summary Cards
 
-| Card | Source |
-| :--- | :--- |
-| Present Count | `attendanceData` + `students` |
-| Absent Count | Frontend computed only |
-| Late Count | Frontend computed only |
-| Total Students | Frontend computed only |
+| Card           | Source                        |
+| :------------- | :---------------------------- |
+| Present Count  | `attendanceData` + `students` |
+| Absent Count   | Frontend computed only        |
+| Late Count     | Frontend computed only        |
+| Total Students | Frontend computed only        |
 
 #### Attendance Analytics Block
 
@@ -2267,14 +2454,14 @@ Mobile  → Card layout (grid-cols-1 md:grid-cols-2)
 
 #### Component Ownership (V2)
 
-| Layer | Path |
-| :--- | :--- |
-| Page owner | `frontend/src/pages/TeacherAttendance.tsx` |
-| Filter Panel | `frontend/src/components/attendance/AttendanceFilters.tsx` |
-| Student Registry | `frontend/src/components/attendance/AttendanceTable.tsx` |
-| Bulk Controls | `frontend/src/components/attendance/AttendanceBulkBar.tsx` |
-| Review Modal | `frontend/src/components/attendance/AttendanceReviewModal.tsx` |
-| Analytics | `frontend/src/components/attendance/AttendanceSummaryChart.tsx` |
+| Layer            | Path                                                            |
+| :--------------- | :-------------------------------------------------------------- |
+| Page owner       | `frontend/src/pages/TeacherAttendance.tsx`                      |
+| Filter Panel     | `frontend/src/components/attendance/AttendanceFilters.tsx`      |
+| Student Registry | `frontend/src/components/attendance/AttendanceTable.tsx`        |
+| Bulk Controls    | `frontend/src/components/attendance/AttendanceBulkBar.tsx`      |
+| Review Modal     | `frontend/src/components/attendance/AttendanceReviewModal.tsx`  |
+| Analytics        | `frontend/src/components/attendance/AttendanceSummaryChart.tsx` |
 
 **Rules:**
 
@@ -2335,11 +2522,11 @@ Teacher Filter Selection
 
 **Modal Sections:**
 
-| Section          | Color   | Fields Shown              |
-| :--------------- | :------ | :------------------------ |
-| Present Cohort   | Emerald | University Roll, Student Name |
-| Late Entries     | Amber   | University Roll, Student Name |
-| Absent Cohort    | Rose    | University Roll, Student Name |
+| Section        | Color   | Fields Shown                  |
+| :------------- | :------ | :---------------------------- |
+| Present Cohort | Emerald | University Roll, Student Name |
+| Late Entries   | Amber   | University Roll, Student Name |
+| Absent Cohort  | Rose    | University Roll, Student Name |
 
 **Analytics Block (inside modal):**
 
@@ -2360,12 +2547,12 @@ Teacher Filter Selection
 
 #### Dropdown Population Endpoints
 
-| Method | Endpoint                              | Status         |
-| :----- | :------------------------------------ | :------------- |
-| `GET`  | `/teacher/attendance/departments`     | Placeholder    |
-| `GET`  | `/teacher/attendance/sections`        | Placeholder    |
-| `GET`  | `/teacher/attendance/semesters`       | Placeholder    |
-| `GET`  | `/teacher/attendance/subjects`        | Placeholder    |
+| Method | Endpoint                          | Status      |
+| :----- | :-------------------------------- | :---------- |
+| `GET`  | `/teacher/attendance/departments` | Placeholder |
+| `GET`  | `/teacher/attendance/sections`    | Placeholder |
+| `GET`  | `/teacher/attendance/semesters`   | Placeholder |
+| `GET`  | `/teacher/attendance/subjects`    | Placeholder |
 
 #### Roster Acquisition Endpoint
 
@@ -2374,6 +2561,7 @@ POST /teacher/attendance/students
 ```
 
 **Request Body:**
+
 ```json
 {
   "department": "",
@@ -2385,6 +2573,7 @@ POST /teacher/attendance/students
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -2404,14 +2593,22 @@ POST /teacher/attendance/submit
 ```
 
 **Request Body:**
+
 ```json
 {
-  "filters": { "department": "", "section": "", "semester": "", "subject": "", "date": "" },
+  "filters": {
+    "department": "",
+    "section": "",
+    "semester": "",
+    "subject": "",
+    "date": ""
+  },
   "attendance": { "studentId": "present | absent | late" }
 }
 ```
 
 **Response:**
+
 ```json
 { "success": true, "message": "...", "batchId": "BATCH-XXXXXX" }
 ```
@@ -2422,12 +2619,12 @@ POST /teacher/attendance/submit
 
 ### Attendance Services Architecture
 
-| File                                   | Functions                                                              | Status       |
-| :------------------------------------- | :--------------------------------------------------------------------- | :----------- |
-| `attendance.service.ts`                | `getAttendanceStudentListService()`, `submitAttendanceService()`       | Placeholder  |
-| `teacherAttendance.service.ts`         | `processTeacherAttendanceService()`                                    | Placeholder  |
+| File                                   | Functions                                                                                        | Status       |
+| :------------------------------------- | :----------------------------------------------------------------------------------------------- | :----------- |
+| `attendance.service.ts`                | `getAttendanceStudentListService()`, `submitAttendanceService()`                                 | Placeholder  |
+| `teacherAttendance.service.ts`         | `processTeacherAttendanceService()`                                                              | Placeholder  |
 | `teacherAttendanceWorkflow.service.ts` | `fetchStudents()`, `bulkUpdate()`, `buildSummary()`, `generateAnalytics()`, `submitAttendance()` | Architecture |
-| `teacherAttendanceSync.service.ts`     | `updateClassStatus()`, `updateDashboardStatus()`                       | Architecture |
+| `teacherAttendanceSync.service.ts`     | `updateClassStatus()`, `updateDashboardStatus()`                                                 | Architecture |
 
 **Current State:** Architecture and placeholder stubs only.
 
@@ -2454,6 +2651,7 @@ Dashboard re-renders → row floats to bottom
 ```
 
 **WebSocket TODOs** (deferred):
+
 - `io.to(teacherId).emit('registry_cycle_update', { timetableId, status })`
 
 ---
@@ -2462,15 +2660,15 @@ Dashboard re-renders → row floats to bottom
 
 The following `// TODO` markers exist in the codebase and represent deferred DB connections:
 
-| TODO Marker                            | File                                    |
-| :------------------------------------- | :-------------------------------------- |
-| `// TODO connect department collection` | `teacher.service.ts`, `attendance.service.ts` |
-| `// TODO connect section collection`   | `teacher.service.ts`                    |
-| `// TODO connect subject collection`   | `teacher.service.ts`                    |
-| `// TODO connect student collection`   | `attendance.service.ts`                 |
-| `// TODO connect attendance collection`| `attendance.service.ts`, `teacherAttendance.service.ts` |
-| `// TODO persist attendance`           | `attendance.service.ts`                 |
-| `// TODO Trigger WebSocket broadcast`  | `teacherAttendanceSync.service.ts`      |
+| TODO Marker                             | File                                                    |
+| :-------------------------------------- | :------------------------------------------------------ |
+| `// TODO connect department collection` | `teacher.service.ts`, `attendance.service.ts`           |
+| `// TODO connect section collection`    | `teacher.service.ts`                                    |
+| `// TODO connect subject collection`    | `teacher.service.ts`                                    |
+| `// TODO connect student collection`    | `attendance.service.ts`                                 |
+| `// TODO connect attendance collection` | `attendance.service.ts`, `teacherAttendance.service.ts` |
+| `// TODO persist attendance`            | `attendance.service.ts`                                 |
+| `// TODO Trigger WebSocket broadcast`   | `teacherAttendanceSync.service.ts`                      |
 
 **No schema modifications have been made.**
 
@@ -2484,17 +2682,17 @@ If IDE crash, context loss, or session interruption occurs:
 
 Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
-| Target                  | Inspect File                       |
-| :---------------------- | :--------------------------------- |
-| Filters                 | `TeacherAttendance.tsx` lines ~160–280 |
-| Fetch Flow              | `handleFetchStudents()` function   |
-| Student Table           | Desktop `<table>` + Mobile `<div>` sections |
-| Bulk Controls           | `handleBulkUpdate()` + toolbar above table |
-| Submit Button           | Submission footer section          |
-| Summary Modal           | `showSummaryModal` state + modal JSX |
-| Pie Chart               | `recharts` PieChart inside modal   |
-| Workflow Services       | `backend/src/services/`            |
-| Sync Placeholders       | `teacherAttendanceSync.service.ts` |
+| Target            | Inspect File                                |
+| :---------------- | :------------------------------------------ |
+| Filters           | `TeacherAttendance.tsx` lines ~160–280      |
+| Fetch Flow        | `handleFetchStudents()` function            |
+| Student Table     | Desktop `<table>` + Mobile `<div>` sections |
+| Bulk Controls     | `handleBulkUpdate()` + toolbar above table  |
+| Submit Button     | Submission footer section                   |
+| Summary Modal     | `showSummaryModal` state + modal JSX        |
+| Pie Chart         | `recharts` PieChart inside modal            |
+| Workflow Services | `backend/src/services/`                     |
+| Sync Placeholders | `teacherAttendanceSync.service.ts`          |
 
 **Step 2: Recover only missing tasks. DO NOT overwrite completed work.**
 
@@ -2530,12 +2728,12 @@ Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
 **Purpose:** Readonly attendance extraction and analytics terminal for teachers.
 
-| Property | Value |
-| :--- | :--- |
-| **Route** | `/teacher/analysis` |
-| **Page owner** | `frontend/src/pages/TeacherAnalytics.tsx` |
-| **Status** | 🚧 In Progress |
-| **Type** | READ ONLY — no DB write, no attendance mutation |
+| Property       | Value                                           |
+| :------------- | :---------------------------------------------- |
+| **Route**      | `/teacher/analysis`                             |
+| **Page owner** | `frontend/src/pages/TeacherAnalytics.tsx`       |
+| **Status**     | 🚧 In Progress                                  |
+| **Type**       | READ ONLY — no DB write, no attendance mutation |
 
 **Theme:** Neo-Shinjuku Night — dark futuristic ERP, glassmorphism, neon cyan accents, premium analytics console.
 
@@ -2547,18 +2745,18 @@ Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
 **Student search rules:**
 
-| Condition | Behavior |
-| :--- | :--- |
-| **Input empty** | Default: **ALL STUDENTS** scoped to selected Department, Semester, Section, Subject |
-| **Name provided** | Require unique identifier — show University Roll Number **OR** Class Roll Number panel |
+| Condition               | Behavior                                                                                            |
+| :---------------------- | :-------------------------------------------------------------------------------------------------- |
+| **Input empty**         | Default: **ALL STUDENTS** scoped to selected Department, Semester, Section, Subject                 |
+| **Name provided**       | Require unique identifier — show University Roll Number **OR** Class Roll Number panel              |
 | **Identity unresolved** | Student record **MUST NOT** load until roll number is provided (or name resolves to a single match) |
 
 **Status filter:**
 
-| Property | Value |
-| :--- | :--- |
-| **Values** | Present, Absent, Late |
-| **Type** | Multi-select |
+| Property    | Value                           |
+| :---------- | :------------------------------ |
+| **Values**  | Present, Absent, Late           |
+| **Type**    | Multi-select                    |
 | **Purpose** | Attendance extraction filtering |
 
 **Action:** `GENERATE ANALYSIS`
@@ -2569,12 +2767,12 @@ Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
 ### Result Table
 
-| Column | Field |
-| :--- | :--- |
+| Column             | Field            |
+| :----------------- | :--------------- |
 | University Roll No | `universityRoll` |
-| Class Roll No | `classRoll` |
-| Student Name | `studentName` |
-| Status | `status` |
+| Class Roll No      | `classRoll`      |
+| Student Name       | `studentName`    |
+| Status             | `status`         |
 
 **Format:**
 
@@ -2592,26 +2790,26 @@ Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
 #### MODE 1 — ALL STUDENTS
 
-| Property | Value |
-| :--- | :--- |
-| **Condition** | Student search input empty |
-| **Dataset** | Department + Semester + Section + Subject cohort |
-| **Chart** | Total Present vs Total Absent |
-| **Chart type** | Pie chart (`recharts`) |
-| **Theme** | Present → Green, Absent → Red, glass background, animated render |
+| Property       | Value                                                            |
+| :------------- | :--------------------------------------------------------------- |
+| **Condition**  | Student search input empty                                       |
+| **Dataset**    | Department + Semester + Section + Subject cohort                 |
+| **Chart**      | Total Present vs Total Absent                                    |
+| **Chart type** | Pie chart (`recharts`)                                           |
+| **Theme**      | Present → Green, Absent → Red, glass background, animated render |
 
 #### MODE 2 — SINGLE STUDENT
 
-| Property | Value |
-| :--- | :--- |
-| **Condition** | Student uniquely identified |
-| **Required** | Student Name **AND** (University Roll **OR** Class Roll) |
-| **Chart 1** | Present vs Absent — pie chart |
-| **Chart 2** | Attendance Trend — Present / Absent / Late over time |
-| **Chart 2 type** | Line chart (`recharts`) |
-| **X-Axis** | Date |
-| **Y-Axis** | Attendance count |
-| **Purpose** | Attendance history visualization |
+| Property         | Value                                                    |
+| :--------------- | :------------------------------------------------------- |
+| **Condition**    | Student uniquely identified                              |
+| **Required**     | Student Name **AND** (University Roll **OR** Class Roll) |
+| **Chart 1**      | Present vs Absent — pie chart                            |
+| **Chart 2**      | Attendance Trend — Present / Absent / Late over time     |
+| **Chart 2 type** | Line chart (`recharts`)                                  |
+| **X-Axis**       | Date                                                     |
+| **Y-Axis**       | Attendance count                                         |
+| **Purpose**      | Attendance history visualization                         |
 
 **Ambiguity state:** Multiple name matches without roll → prompt for University Roll or Class Roll.
 
@@ -2619,26 +2817,26 @@ Check each feature against `DONE` / `PARTIAL` / `MISSING`:
 
 ### Export Layer
 
-| Property | Value |
-| :--- | :--- |
-| **Button** | `DOWNLOAD REPORT` |
-| **Current format** | CSV (frontend-generated blob) |
-| **Future format** | PDF via `pdf.service.ts` |
+| Property            | Value                                                                                          |
+| :------------------ | :--------------------------------------------------------------------------------------------- |
+| **Button**          | `DOWNLOAD REPORT`                                                                              |
+| **Current format**  | CSV (frontend-generated blob)                                                                  |
+| **Future format**   | PDF via `pdf.service.ts`                                                                       |
 | **Export includes** | Filters used, student list, attendance records, summary statistics, chart snapshot placeholder |
-| **Current** | Frontend export only — no backend report generation |
+| **Current**         | Frontend export only — no backend report generation                                            |
 
 ---
 
 ### Component Ownership (Analysis V2)
 
-| Layer | Path |
-| :--- | :--- |
-| Page | `frontend/src/pages/TeacherAnalytics.tsx` |
-| Filters | `frontend/src/components/analytics/AnalyticsFilters.tsx` |
-| Results table | `frontend/src/components/analytics/AnalyticsTable.tsx` |
+| Layer          | Path                                                            |
+| :------------- | :-------------------------------------------------------------- |
+| Page           | `frontend/src/pages/TeacherAnalytics.tsx`                       |
+| Filters        | `frontend/src/components/analytics/AnalyticsFilters.tsx`        |
+| Results table  | `frontend/src/components/analytics/AnalyticsTable.tsx`          |
 | Overview chart | `frontend/src/components/analytics/AttendanceOverviewChart.tsx` |
-| Trend chart | `frontend/src/components/analytics/StudentTrendChart.tsx` |
-| Export | `frontend/src/components/analytics/ExportPanel.tsx` |
+| Trend chart    | `frontend/src/components/analytics/StudentTrendChart.tsx`       |
+| Export         | `frontend/src/components/analytics/ExportPanel.tsx`             |
 
 **Rules:**
 

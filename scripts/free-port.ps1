@@ -1,5 +1,5 @@
 param(
-  # Local npm backend default (Docker full stack uses 5000 — do not free that port)
+  # Local npm backend default (Docker full stack uses 5000 - do not free that port)
   [int]$Port = 5001,
   [switch]$Force
 )
@@ -48,7 +48,7 @@ Start-Sleep -Seconds 1
 $still = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 if ($still) {
   if ($skipped -gt 0) {
-    Write-Host "Port $Port still in use (Docker or non-Node process). Local dev uses 5001; Docker backend uses 5000 — they can run together."
+    Write-Host "Port $Port still in use (Docker or non-Node process). Local dev uses 5001; Docker backend uses 5000 - they can run together."
   } else {
     Write-Host "Port $Port is still in use. Close the app manually or run: .\scripts\free-port.ps1 -Port $Port -Force"
   }
