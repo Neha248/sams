@@ -143,59 +143,7 @@ CORS_ORIGIN=http://localhost:5173
 
 ## Run Modes
 
-### Option A: Local Development (Node + MongoDB)
-
-**You need MongoDB on port 27017 before the backend will start.**
-
-#### Start MongoDB (pick one)
-
-**A) Docker (recommended)** — start **Docker Desktop**, then from project root:
-
-```powershell
-.\scripts\start-mongo.ps1
-```
-
-Or: `docker compose -f docker-compose.mongo.yml up -d`
-
-**B) MongoDB installed on Windows** — start the **MongoDB Server** service in `services.msc`.
-
-#### Free port 5001 (if local backend says port in use)
-
-```powershell
-.\scripts\free-port.ps1
-```
-
-This stops **Node only** on port **5001** (never kills Docker). Docker’s backend stays on **5000**; local `npm run dev` uses **5001** so both can run together with MongoDB in Docker.
-
-#### Run app
-
-1. Confirm MongoDB: port 27017 is listening.
-2. Start backend:
-
-```bash
-cd backend
-npm run dev
-```
-
-3. Start frontend in a new terminal:
-
-```bash
-cd frontend
-npm run dev
-```
-
-4. Seed data (required for test login):
-
-```bash
-cd backend
-npm run seed
-```
-
-5. Open:
-   - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend health: [http://localhost:5001/health](http://localhost:5001/health)
-
-### Option B: Docker Compose
+### Option A: Docker Compose (Recommended)
 
 1. From project root:
 
@@ -227,6 +175,58 @@ docker exec -it sams-backend npm run seed
 - Frontend: use `docker-compose ps` and open host port mapped to container `80`
 - Backend health: open host port mapped to container `5000` + `/health`
 - Mongo Express: [http://localhost:8081](http://localhost:8081)
+
+### Option B: Local Development (Node + MongoDB)
+
+**You need MongoDB on port 27017 before the backend will start.**
+
+#### Start MongoDB (pick one)
+
+**A) Docker (recommended)** — start **Docker Desktop**, then from project root:
+
+```powershell
+.\scripts\start-mongo.ps1
+```
+
+Or: `docker compose -f docker-compose.mongo.yml up -d`
+
+**B) MongoDB installed on Windows** — start the **MongoDB Server** service in `services.msc`.
+
+#### Free port 5001 (if local backend says port in use)
+
+```powershell
+.\scripts\free-port.ps1
+```
+
+This stops **Node only** on port **5001** (never kills Docker). Docker's backend stays on **5000**; local `npm run dev` uses **5001** so both can run together with MongoDB in Docker.
+
+#### Run app
+
+1. Confirm MongoDB: port 27017 is listening.
+2. Start backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+3. Start frontend in a new terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+4. Seed data (required for test login):
+
+```bash
+cd backend
+npm run seed
+```
+
+5. Open:
+   - Frontend: [http://localhost:5173](http://localhost:5173)
+   - Backend health: [http://localhost:5001/health](http://localhost:5001/health)
 
 ## Login Credentials (Important)
 
@@ -298,8 +298,6 @@ After seeding, students and teachers are spread across **semesters 1, 3, 5, and 
 - Realtime analytics (deferred)
 
 ## Common Troubleshooting
-
-### Mongo URI undefined / backend fails to connect
 
 - Ensure `backend/.env` exists.
 - Ensure `MONGO_URI` is present in `.env`.
