@@ -210,6 +210,7 @@ docker-compose ps
 ```
 
 Expected services:
+
 - `sams-backend`
 - `sams-frontend`
 - `attendance-mongodb`
@@ -222,6 +223,7 @@ docker exec -it sams-backend npm run seed
 ```
 
 4. Open:
+
 - Frontend: use `docker-compose ps` and open host port mapped to container `80`
 - Backend health: open host port mapped to container `5000` + `/health`
 - Mongo Express: [http://localhost:8081](http://localhost:8081)
@@ -250,6 +252,7 @@ Only for [http://localhost:8081](http://localhost:8081):
 - Admin: `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications`
 
 After seeding, students and teachers are spread across **semesters 1, 3, 5, and 7**. Use the semester filter on the admin Students and Teachers pages to browse each cohort.
+
 - Teacher: `/`, `/teacher/attendance`, `/teacher/analysis`, `/timetable`
 - Admin: `/`, `/admin/students`, `/admin/notifications`
 
@@ -271,9 +274,9 @@ After seeding, students and teachers are spread across **semesters 1, 3, 5, and 
 
 ### Analytics Modes
 
-| Mode | Condition | Charts |
-| :--- | :--- | :--- |
-| **All students** | Student search empty | Present vs Absent (pie) |
+| Mode               | Condition                            | Charts                                                                               |
+| :----------------- | :----------------------------------- | :----------------------------------------------------------------------------------- |
+| **All students**   | Student search empty                 | Present vs Absent (pie)                                                              |
 | **Single student** | Name + university roll or class roll | Present vs Absent (pie) + attendance trend (line: Present / Absent / Late over date) |
 
 ### Tech
@@ -338,3 +341,107 @@ cd backend && npm run seed
 docker-compose up --build -d
 docker-compose down
 ```
+
+## Contributing
+
+### Creating a Feature Branch
+
+When working on a dashboard or feature for a specific role, create a new branch following the naming convention:
+
+```bash
+# For Teacher dashboard features
+git checkout -b teacher-dashboard
+
+# For Admin dashboard features
+git checkout -b admin-dashboard
+
+# For Student dashboard features
+git checkout -b student-dashboard
+```
+
+#### Branch Naming Pattern
+
+Use the following pattern:
+
+- `teacher-dashboard` — For Teacher module features
+- `admin-dashboard` — For Admin module features
+- `student-dashboard` — For Student module features
+- For sub-features, append with a hyphen: `teacher-dashboard-attendance-sync`, `admin-dashboard-timetable`, etc.
+
+### Development Workflow
+
+1. **Create and switch to your branch:**
+
+```bash
+git checkout -b teacher-dashboard
+```
+
+2. **Make your changes** in the frontend and/or backend
+
+3. **Commit your changes with clear messages:**
+
+```bash
+git add .
+git commit -m "feat: add attendance marking workflow for teachers"
+```
+
+4. **Push your branch to the repository:**
+
+```bash
+git push -u origin teacher-dashboard
+```
+
+The `-u` flag sets the upstream branch so future pushes don't require the branch name.
+
+### Pushing Code to Main Repository
+
+Once your feature is complete and tested:
+
+1. **Ensure your branch is up to date with main:**
+
+```bash
+git checkout main
+git pull origin main
+git checkout teacher-dashboard
+git merge main
+```
+
+2. **Resolve any merge conflicts** if they exist
+
+3. **Push your updated branch:**
+
+```bash
+git push origin teacher-dashboard
+```
+
+4. **Create a Pull Request (PR)** on GitHub/your repository:
+   - Go to your repository's pull requests section
+   - Click "New Pull Request"
+   - Select `main` as the base branch and your `teacher-dashboard` branch as the compare branch
+   - Add a clear title and description of your changes
+   - Wait for code review and approval
+
+5. **Merge to main** once approved:
+
+```bash
+# Via GitHub UI (recommended) or via CLI:
+git checkout main
+git pull origin main
+git merge teacher-dashboard
+git push origin main
+```
+
+6. **Delete the feature branch (optional):**
+
+```bash
+git branch -d teacher-dashboard
+git push origin --delete teacher-dashboard
+```
+
+### Best Practices
+
+- Keep commits atomic — one feature/fix per commit
+- Write descriptive commit messages
+- Test your changes locally before pushing (`npm run dev` for local, `docker-compose up` for Docker)
+- Pull from `main` regularly to avoid large merge conflicts
+- Use meaningful branch names so others understand what you're working on
