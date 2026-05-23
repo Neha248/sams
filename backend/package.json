@@ -8,7 +8,9 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "seed": "ts-node scripts/seed.ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "docker:up": "docker-compose up --build -d",
+    "docker:down": "docker-compose down"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

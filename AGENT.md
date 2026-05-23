@@ -41,7 +41,7 @@ This section helps future AI agents understand the current implementation progre
 - ✅ **Admin Department dashboard** (`/`): Faculty attendance table + assign teacher (Stitch Academic Intelligence theme).
 - ✅ **Multi-semester seed data**: Students, teachers, subjects, timetables, and attendance distributed across semesters **1, 3, 5, 7** (`backend/scripts/seed.ts`).
 - ✅ **Admin Timetable portal** (`/admin/timetable`): Department/semester/section filters, read-only schedule table (7 columns: UID, teacher login, subject, department, section, semester, timing), **Add Slot** + **Publish Cohort** toolbar actions — `adminTimetable.service.ts`, `AdminTimetable.tsx`, `TimetableSlotModal`, `TimetableOverviewTable`. Backend `PUT`/`DELETE` timetable routes exist but are not wired in the table UI.
-- ✅ **Local dev tooling (Windows)**: `docker-compose.mongo.yml` (MongoDB-only), `scripts/start-mongo.ps1`, `scripts/free-port.ps1` (Node-only, port **5001**); local backend **5001** + Docker backend **5000** can coexist; Vite proxies via `frontend/.env.development`.
+- ✅ **Local dev tooling (Windows)**: `docker-compose.mongo.yml` (MongoDB-only), `scripts/start-mongo.ps1`, `scripts/free-port.ps1` (Node-only, port **5001**); local backend **5001** + Docker backend **5000** can coexist; Vite proxies via `frontend/.env.development`. npm scripts for Docker: `npm run docker:up` and `npm run docker:down` (available in both `backend/` and `frontend/` folders).
 
 #### In Progress:
 

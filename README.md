@@ -335,7 +335,11 @@ cd frontend && npm run dev
 # Seed
 cd backend && npm run seed
 
-# Docker up/down
+# Docker up/down (via npm scripts from backend or frontend folder)
+npm run docker:up
+npm run docker:down
+
+# Docker up/down (direct commands from project root)
 docker-compose up --build -d
 docker-compose down
 ```
