@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react';
+import AttendanceSummaryChart from '../components/attendance/AttendanceSummaryChart';
+import SubjectAttendanceTable from '../components/attendance/SubjectAttendanceTable';
+import SubjectSafeZoneAlerts from '../components/attendance/SubjectSafeZoneAlerts';
+import type { AttendanceChartSegment, SubjectWiseAttendanceRow } from '../components/attendance/types';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 
@@ -12,11 +16,13 @@ const Dashboard = () => {
   const [dateStr, setDateStr] = useState('');
 
   useEffect(() => {
+    if (!user?.role) return;
+
     const fetchDashboard = async () => {
       setLoading(true);
       setError(null);
       try {
-        if (user?.role === 'teacher') {
+        if (user.role === 'teacher') {
           const [statsRes, classesRes] = await Promise.all([
             api.get('/teacher/dashboard/overview'),
             api.get('/teacher/dashboard/classes')
@@ -24,8 +30,8 @@ const Dashboard = () => {
           setStats((statsRes as any).data);
           setClasses((classesRes as any).data);
         } else {
-          const res = await api.get(`/${user?.role}/dashboard`);
-          setStats((res as any).data);
+          const res = await api.get(`/${user.role}/dashboard`);
+          setStats((res as { data: Record<string, unknown> }).data);
         }
       } catch (err) {
         console.error("Dashboard fetch error:", err);
@@ -121,16 +127,100 @@ const Dashboard = () => {
       )}
 
       {user?.role === 'student' && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Total Classes" value={stats.summary?.total || 0} color="blue" />
-          <StatCard title="Present" value={stats.summary?.present || 0} color="blue" />
-          <StatCard title="Absent" value={stats.summary?.absent || 0} color="crimson" />
-          <StatCard 
-            title="Attendance %" 
-            value={`${stats.summary?.percentage || 0}%`} 
-            color={(stats.summary?.percentage || 0) >= 75 ? "blue" : "crimson"} 
+        <>
+          <div className="rounded-xl border border-white/10 bg-navy-900/50 px-5 py-4 text-sm text-slate-300 space-y-1">
+            <p className="font-semibold text-white">Attendance rules</p>
+            <p>• Safe zone: every subject must be ≥ 75% (present ÷ total classes).</p>
+            <p>• 2 late marks = 1 absent (effective absent = absent + floor(late ÷ 2)).</p>
+            <p>• Late does not count as present for percentage.</p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard title="Total Classes" value={stats.summary?.total || 0} color="blue" />
+            <StatCard title="Present" value={stats.summary?.present || 0} color="blue" />
+            <StatCard title="Late" value={stats.summary?.late || 0} color="amber" />
+            <StatCard title="Absent" value={stats.summary?.absent || 0} color="crimson" />
+            <StatCard
+              title="Eff. Absent"
+              value={stats.summary?.effectiveAbsent ?? 0}
+              color="crimson"
+            />
+            <StatCard
+              title="Overall %"
+              value={`${stats.summary?.percentage || 0}%`}
+              color={stats.isSafe ? 'blue' : 'crimson'}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AttendanceSummaryChart
+              data={
+                (
+                  [
+                    { name: 'Present', value: stats.summary?.present || 0, color: '#00D4FF' },
+                    { name: 'Absent', value: stats.summary?.absent || 0, color: '#FF4B6E' },
+                    { name: 'Late', value: stats.summary?.late || 0, color: '#FBBF24' },
+                  ].filter((d) => d.value > 0) as AttendanceChartSegment[]
+                ).length > 0
+                  ? ([
+                      { name: 'Present', value: stats.summary?.present || 0, color: '#00D4FF' },
+                      { name: 'Absent', value: stats.summary?.absent || 0, color: '#FF4B6E' },
+                      { name: 'Late', value: stats.summary?.late || 0, color: '#FBBF24' },
+                    ].filter((d) => d.value > 0) as AttendanceChartSegment[])
+                  : [{ name: 'No data', value: 1, color: '#334155' }]
+              }
+            />
+            <div className="glass-panel rounded-2xl border border-white/10 p-5 space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Classes needed (per subject, to reach 75%)
+              </h3>
+              <ul className="space-y-2 max-h-[260px] overflow-y-auto">
+                {(stats.subjectWise as SubjectWiseAttendanceRow[])?.map((s) => (
+                  <li
+                    key={s.subjectId || s.subjectCode}
+                    className="flex justify-between items-center text-sm border-b border-white/5 pb-2"
+                  >
+                    <span className="text-slate-200 truncate pr-2">
+                      {s.subjectName}{' '}
+                      <span className="text-slate-500">({s.subjectCode})</span>
+                    </span>
+                    <span
+                      className={`font-bold shrink-0 ${
+                        (s.classesNeeded ?? 0) === 0 ? 'text-neon-blue' : 'text-neon-crimson'
+                      }`}
+                    >
+                      {(s.classesNeeded ?? 0) === 0 ? 'OK' : `+${s.classesNeeded} present`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div
+            className={`rounded-xl px-5 py-4 border space-y-2 ${
+              stats.isSafe
+                ? 'bg-neon-blue/10 border-neon-blue/30 text-neon-blue'
+                : 'bg-neon-crimson/10 border-neon-crimson/30 text-neon-crimson'
+            }`}
+          >
+            <p className="font-semibold text-sm uppercase tracking-wide">
+              {stats.isSafe
+                ? `Safe zone — all ${stats.subjectSafeSummary?.totalSubjects ?? 0} subjects are at or above 75%`
+                : `Below safe zone — ${stats.subjectSafeSummary?.unsafeSubjects?.length ?? 0} subject(s) under 75%`}
+            </p>
+          </div>
+
+          {!stats.isSafe && (
+            <SubjectSafeZoneAlerts
+              unsafeSubjects={(stats.subjectSafeSummary?.unsafeSubjects as SubjectWiseAttendanceRow[]) || []}
+            />
+          )}
+
+          <SubjectAttendanceTable
+            rows={(stats.subjectWise as SubjectWiseAttendanceRow[]) || []}
           />
-        </div>
+        </>
       )}
 
       {user?.role === 'teacher' && stats && (
@@ -355,21 +445,36 @@ const Dashboard = () => {
         </div>
       )}
 
-      {user?.role !== 'teacher' && (
+      {user?.role === 'admin' && (
         <div className="mt-8 glass-panel rounded-xl p-6 h-96 flex items-center justify-center">
-           <p className="text-slate-500">More charts and analytics will be rendered here...</p>
+          <p className="text-slate-500">More charts and analytics will be rendered here...</p>
         </div>
       )}
     </div>
   );
 };
 
-const StatCard = ({ title, value, color }: { title: string, value: string | number, color: 'blue' | 'crimson' }) => (
-  <div className="glass-panel p-6 rounded-xl border-l-[3px]" style={{ borderLeftColor: color === 'blue' ? '#00D4FF' : '#FF4B6E' }}>
+const STAT_COLORS = {
+  blue: { border: '#00D4FF', text: 'text-neon-blue' },
+  crimson: { border: '#FF4B6E', text: 'text-neon-crimson' },
+  amber: { border: '#FBBF24', text: 'text-amber-400' },
+} as const;
+
+const StatCard = ({
+  title,
+  value,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  color: keyof typeof STAT_COLORS;
+}) => (
+  <div
+    className="glass-panel p-6 rounded-xl border-l-[3px]"
+    style={{ borderLeftColor: STAT_COLORS[color].border }}
+  >
     <h3 className="text-sm font-medium text-slate-400 mb-2">{title}</h3>
-    <div className={`text-4xl font-bold ${color === 'blue' ? 'text-neon-blue' : 'text-neon-crimson'}`}>
-      {value}
-    </div>
+    <div className={`text-4xl font-bold ${STAT_COLORS[color].text}`}>{value}</div>
   </div>
 );
 
