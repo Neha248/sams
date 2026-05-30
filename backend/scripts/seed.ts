@@ -201,27 +201,41 @@ const seed = async () => {
     isPublished: boolean;
   }> = [];
 
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const;
+  const timeSlots = [
+    { start: '9:00', end: '10:00' },
+    { start: '10:00', end: '11:00' },
+    { start: '11:00', end: '12:00' },
+    { start: '12:00', end: '13:00' },
+    { start: '13:00', end: '14:00' },
+    { start: '14:00', end: '15:00' },
+    { start: '15:00', end: '16:00' },
+  ];
+
   for (const semester of ACTIVE_SEMESTERS) {
     const semSubjects = subjectsBySemester(semester, csId);
     const cohortStudents = students.filter((s) => s.profile.semester === semester);
     const sections = [...new Set(cohortStudents.map((s) => s.profile.section))];
 
     for (const section of sections) {
-      semSubjects.forEach((sub, idx) => {
-        const teacherId =
-          teacherBySubject.get(sub._id.toString()) ?? teachers[0].user._id;
-        const day = days[idx % days.length];
-        timetableEntries.push({
-          departmentId: csId,
-          semester,
-          section,
-          day,
-          startTime: `${9 + (idx % 4)}:00`,
-          endTime: `${10 + (idx % 4)}:00`,
-          subjectId: sub._id,
-          teacherId,
-          roomNo: `${300 + idx}`,
-          isPublished: true,
+      weekdays.forEach((day, dayIdx) => {
+        timeSlots.forEach((slot, slotIdx) => {
+          const sub = semSubjects[(dayIdx + slotIdx) % semSubjects.length];
+          if (!sub) return;
+          const teacherId =
+            teacherBySubject.get(sub._id.toString()) ?? teachers[0].user._id;
+          timetableEntries.push({
+            departmentId: csId,
+            semester,
+            section,
+            day,
+            startTime: slot.start,
+            endTime: slot.end,
+            subjectId: sub._id,
+            teacherId,
+            roomNo: `${300 + slotIdx}${dayIdx}`,
+            isPublished: true,
+          });
         });
       });
     }
@@ -244,9 +258,11 @@ const seed = async () => {
         (s) =>
           s.profile.semester === slot.semester && s.profile.section === slot.section
       );
-      for (const student of cohort) {
-        const rand = Math.random();
-        const status = rand < 0.78 ? 'present' : rand < 0.9 ? 'absent' : 'late';
+      for (let studentIdx = 0; studentIdx < cohort.length; studentIdx++) {
+        const student = cohort[studentIdx];
+        // Deterministic mix so every student has present, absent, and late across subjects
+        const bucket = (studentIdx + d + attendanceCount + slot.semester) % 10;
+        const status = bucket < 6 ? 'present' : bucket < 8 ? 'absent' : 'late';
         try {
           await Attendance.create({
             studentId: student.user._id,

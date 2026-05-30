@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import Attendance from '../models/Attendance.model';
 import StudentProfile from '../models/StudentProfile.model';
@@ -6,6 +7,14 @@ import Timetable from '../models/Timetable.model';
 import Notification from '../models/Notification.model';
 import User from '../models/User.model';
 import { generateStudentPDF } from '../services/pdf.service';
+import {
+  applyLateToAbsentRule,
+  buildSafeZoneSuggestion,
+  classesNeededForSafeZone,
+  countUpcomingClassesBySubject,
+  endOfToday,
+  startOfToday,
+} from '../utils/attendanceSafeZone';
 import { sendSuccess, sendError } from '../utils/response';
 
 // GET /api/student/dashboard
@@ -16,24 +25,21 @@ export const getStudentDashboard = async (req: AuthRequest, res: Response): Prom
       .populate('departmentId', 'name code');
 
     const records = await Attendance.find({ studentId });
-    const total = records.length;
     const present = records.filter((r) => r.status === 'present').length;
     const absent = records.filter((r) => r.status === 'absent').length;
     const late = records.filter((r) => r.status === 'late').length;
-    const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+    const summaryStats = applyLateToAbsentRule({
+      present,
+      absent,
+      late,
+      total: records.length,
+    });
+    const classesNeeded = classesNeededForSafeZone(summaryStats.present, summaryStats.total);
 
-    // Classes needed to reach 75%
-    let classesNeeded = 0;
-    if (percentage < 75) {
-      // (present + x) / (total + x) >= 0.75
-      // present + x >= 0.75 * total + 0.75x
-      // 0.25x >= 0.75 * total - present
-      classesNeeded = Math.ceil((0.75 * total - present) / 0.25);
-    }
-
-    // Subject-wise stats
+    // Subject-wise stats (aggregate $match requires ObjectId, not string)
+    const studentObjectId = new mongoose.Types.ObjectId(studentId);
     const subjectAgg = await Attendance.aggregate([
-      { $match: { studentId: profile?.userId } },
+      { $match: { studentId: studentObjectId } },
       {
         $group: {
           _id: '$subjectId',
@@ -49,24 +55,95 @@ export const getStudentDashboard = async (req: AuthRequest, res: Response): Prom
       { $unwind: '$subject' },
       {
         $project: {
+          _id: 1,
           subjectName: '$subject.name',
           subjectCode: '$subject.code',
-          total: 1,
-          present: 1,
-          absent: 1,
-          late: 1,
+          total: '$total',
+          present: '$present',
+          absent: '$absent',
+          late: '$late',
+          lateAsAbsent: { $floor: { $divide: ['$late', 2] } },
+          effectiveAbsent: { $add: ['$absent', { $floor: { $divide: ['$late', 2] } }] },
+          remainingLate: { $mod: ['$late', 2] },
+          presentPct: {
+            $round: [{ $multiply: [{ $divide: ['$present', '$total'] }, 100] }, 1],
+          },
+          absentPct: {
+            $round: [{ $multiply: [{ $divide: ['$absent', '$total'] }, 100] }, 1],
+          },
+          latePct: {
+            $round: [{ $multiply: [{ $divide: ['$late', '$total'] }, 100] }, 1],
+          },
           percentage: {
             $round: [{ $multiply: [{ $divide: ['$present', '$total'] }, 100] }, 1],
           },
+          isSafe: { $gte: [{ $multiply: [{ $divide: ['$present', '$total'] }, 100] }, 75] },
         },
       },
+      { $sort: { subjectName: 1 } },
     ]);
+
+    let upcomingBySubject = new Map<string, number>();
+    if (profile) {
+      const timetableSlots = await Timetable.find({
+        departmentId: profile.departmentId,
+        semester: profile.semester,
+        section: profile.section,
+        isPublished: true,
+      }).select('day subjectId');
+
+      upcomingBySubject = countUpcomingClassesBySubject(timetableSlots);
+    }
+
+    const enrichSubject = (s: (typeof subjectAgg)[number]) => {
+      const subjectId = s._id?.toString() ?? '';
+      const classesNeeded = classesNeededForSafeZone(s.present, s.total);
+      const upcomingClassesNextWeek = upcomingBySubject.get(subjectId) ?? 0;
+      const canReachSafeZone = classesNeeded > 0 && upcomingClassesNextWeek >= classesNeeded;
+
+      return {
+        ...s,
+        subjectId,
+        classesNeeded,
+        upcomingClassesNextWeek,
+        canReachSafeZone,
+        suggestion: buildSafeZoneSuggestion(s.subjectName, classesNeeded, upcomingClassesNextWeek),
+      };
+    };
+
+    const subjectWiseEnriched = subjectAgg.map(enrichSubject);
+
+    // Safe zone: every subject must be >= 75% (not overall average only)
+    const safeSubjectCount = subjectWiseEnriched.filter((s) => s.isSafe).length;
+    const allSubjectsSafe = subjectWiseEnriched.length > 0 && safeSubjectCount === subjectWiseEnriched.length;
+    const subjectsBelowSafe = subjectWiseEnriched.filter((s) => !s.isSafe);
 
     sendSuccess(res, {
       profile,
-      summary: { total, present, absent, late, percentage, classesNeeded },
-      subjectWise: subjectAgg,
-      isSafe: percentage >= 75,
+      summary: {
+        total: summaryStats.total,
+        present: summaryStats.present,
+        absent: summaryStats.absent,
+        late: summaryStats.late,
+        lateAsAbsent: summaryStats.lateAsAbsent,
+        effectiveAbsent: summaryStats.effectiveAbsent,
+        remainingLate: summaryStats.remainingLate,
+        percentage: summaryStats.percentage,
+        classesNeeded,
+      },
+      attendanceRules: {
+        safeZonePerSubject: 75,
+        lateToAbsentRatio: 2,
+        description: 'Safe zone requires every subject at or above 75% (present ÷ total). Every 2 late marks count as 1 absent.',
+      },
+      subjectWise: subjectWiseEnriched,
+      isSafe: allSubjectsSafe,
+      subjectSafeSummary: {
+        totalSubjects: subjectWiseEnriched.length,
+        safeSubjects: safeSubjectCount,
+        unsafeSubjects: subjectsBelowSafe,
+      },
+      hasUnsafeSubjects: subjectsBelowSafe.length > 0,
     });
   } catch (err) {
     sendError(res, (err as Error).message);
@@ -82,7 +159,11 @@ export const getStudentAttendance = async (req: AuthRequest, res: Response): Pro
     const filter: Record<string, unknown> = { studentId };
     if (subject) filter.subjectId = subject;
     if (status) filter.status = status;
-    if (from || to) {
+
+    const useTodayOnly = req.query.today === 'true' || (!from && !to);
+    if (useTodayOnly) {
+      filter.date = { $gte: startOfToday(), $lte: endOfToday() };
+    } else if (from || to) {
       filter.date = {};
       if (from) (filter.date as Record<string, unknown>)['$gte'] = new Date(from as string);
       if (to) (filter.date as Record<string, unknown>)['$lte'] = new Date(to as string);
@@ -118,6 +199,7 @@ export const getStudentTimetable = async (req: AuthRequest, res: Response): Prom
       semester: profile.semester,
       section: profile.section,
       isPublished: true,
+      day: { $in: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] },
     })
       .populate('subjectId', 'name code')
       .populate('teacherId', 'fullName')
