@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import SubjectSafeZoneAlerts from '../components/attendance/SubjectSafeZoneAlerts';
-import type { SubjectSafeSummary, SubjectWiseAttendanceRow } from '../components/attendance/types';
+import { Link } from 'react-router-dom';
+import type { SubjectWiseAttendanceRow } from '../components/attendance/types';
 import api from '../lib/axios';
 
 type Notice = {
@@ -14,14 +14,9 @@ type Notice = {
 const Notifications = () => {
   const [items, setItems] = useState<Notice[]>([]);
   const [unsafeSubjects, setUnsafeSubjects] = useState<SubjectWiseAttendanceRow[]>([]);
-  const [isSafe, setIsSafe] = useState(true);
-  const [summary, setSummary] = useState<{
-    classesNeeded?: number;
-    effectiveAbsent?: number;
-    lateAsAbsent?: number;
-  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAlerts, setShowAlerts] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -32,15 +27,11 @@ const Notifications = () => {
           api.get('/student/notifications') as Promise<{ data: Notice[] }>,
           api.get('/student/dashboard') as Promise<{
             data: {
-              isSafe?: boolean;
-              summary?: { classesNeeded?: number; effectiveAbsent?: number; lateAsAbsent?: number };
-              subjectSafeSummary?: SubjectSafeSummary;
+              subjectSafeSummary?: { unsafeSubjects?: SubjectWiseAttendanceRow[] };
             };
           }>,
         ]);
         setItems(noticesRes.data || []);
-        setIsSafe(Boolean(dashboardRes.data.isSafe));
-        setSummary(dashboardRes.data.summary ?? null);
         setUnsafeSubjects(dashboardRes.data.subjectSafeSummary?.unsafeSubjects ?? []);
       } catch (err) {
         setError(err as string);
@@ -51,13 +42,19 @@ const Notifications = () => {
     fetchAll();
   }, []);
 
-  const totalMakeupClasses = unsafeSubjects.reduce((sum, s) => sum + (s.classesNeeded ?? 0), 0);
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Notifications</h1>
-        <p className="text-slate-400 text-sm">Attendance alerts and admin announcements</p>
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Notifications</h1>
+          <p className="text-slate-400 text-sm">Admin announcements</p>
+        </div>
+        <button
+          onClick={() => setShowAlerts(true)}
+          className="px-4 py-2 rounded-lg border border-neon-blue/30 text-neon-blue bg-neon-blue/10 hover:bg-neon-blue/20 transition-all text-sm font-semibold flex items-center gap-2"
+        >
+          <span>⚠️</span> View Alert Messages
+        </button>
       </div>
 
       {loading ? (
@@ -70,33 +67,6 @@ const Notifications = () => {
         </div>
       ) : (
         <>
-          {!isSafe && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-5 py-4">
-                <h2 className="text-amber-400 font-bold text-sm uppercase tracking-wide flex items-center gap-2">
-                  <span>🔔</span> Attendance alert
-                </h2>
-                <p className="text-slate-200 text-sm mt-2">
-                  You need to attend a total of{' '}
-                  <span className="text-white font-bold">{totalMakeupClasses}</span> more present
-                  class(es) across subjects below to bring each subject to the{' '}
-                  <span className="text-neon-blue font-semibold">75% safe zone</span>.
-                </p>
-                <p className="text-xs text-slate-400 mt-2">
-                  Policy: 2 late marks = 1 absent · Effective absent (overall):{' '}
-                  {summary?.effectiveAbsent ?? 0} (includes {summary?.lateAsAbsent ?? 0} from late)
-                </p>
-              </div>
-              <SubjectSafeZoneAlerts unsafeSubjects={unsafeSubjects} />
-            </div>
-          )}
-
-          {isSafe && (
-            <div className="rounded-xl border border-neon-blue/30 bg-neon-blue/10 px-5 py-4 text-neon-blue text-sm font-medium">
-              All subjects are in the safe zone (≥75% each). No makeup classes required right now.
-            </div>
-          )}
-
           <div className="space-y-3">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
               Admin announcements
@@ -121,6 +91,75 @@ const Notifications = () => {
             )}
           </div>
         </>
+      )}
+
+      {/* Alert Messages Modal */}
+      {showAlerts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="glass-panel w-full max-w-lg rounded-2xl border border-white/10 p-6 space-y-4 bg-navy-950/95 shadow-2xl relative">
+            <button
+              onClick={() => setShowAlerts(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors text-lg"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-300">
+                Alert Messages
+              </h3>
+            </div>
+            {unsafeSubjects.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-xs text-neon-crimson font-semibold">
+                  The following subjects are below the safe attendance zone (75%):
+                </p>
+                <ul className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {unsafeSubjects.map((s) => (
+                    <li
+                      key={s.subjectId || s.subjectCode}
+                      className="rounded-lg border border-white/10 bg-navy-900/60 px-4 py-3 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-white">
+                          {s.subjectName}{' '}
+                          <span className="text-slate-400 font-normal">({s.subjectCode})</span>
+                        </p>
+                        <span className="text-neon-crimson font-bold text-sm">
+                          {s.percentage}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Need <span className="text-white font-medium">+{s.classesNeeded}</span> present to reach 75%.
+                      </p>
+                      {s.suggestion && (
+                        <p className="text-xs text-neon-blue">💡 {s.suggestion}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-neon-blue py-4">
+                All subjects are in the safe zone. Well done!
+              </p>
+            )}
+            <div className="flex justify-end gap-3 pt-3 border-t border-white/5">
+              <button
+                onClick={() => setShowAlerts(false)}
+                className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-all text-xs font-semibold"
+              >
+                Close
+              </button>
+              <Link
+                to="/attendance"
+                className="px-4 py-2 rounded-lg bg-neon-blue text-navy-950 hover:bg-neon-blue/80 transition-all text-xs font-bold"
+              >
+                View Details
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

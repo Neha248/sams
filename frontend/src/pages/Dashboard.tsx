@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import AttendanceSummaryChart from '../components/attendance/AttendanceSummaryChart';
-import SubjectAttendanceTable from '../components/attendance/SubjectAttendanceTable';
-import SubjectSafeZoneAlerts from '../components/attendance/SubjectSafeZoneAlerts';
 import type { AttendanceChartSegment, SubjectWiseAttendanceRow } from '../components/attendance/types';
 import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
@@ -127,54 +126,68 @@ const Dashboard = () => {
       )}
 
       {user?.role === 'student' && stats && (
-        <>
-          <div className="rounded-xl border border-white/10 bg-navy-900/50 px-5 py-4 text-sm text-slate-300 space-y-1">
-            <p className="font-semibold text-white">Attendance rules</p>
-            <p>• Safe zone: every subject must be ≥ 75% (present ÷ total classes).</p>
-            <p>• 2 late marks = 1 absent (effective absent = absent + floor(late ÷ 2)).</p>
-            <p>• Late does not count as present for percentage.</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <StatCard title="Total Classes" value={stats.summary?.total || 0} color="blue" />
-            <StatCard title="Present" value={stats.summary?.present || 0} color="blue" />
-            <StatCard title="Late" value={stats.summary?.late || 0} color="amber" />
-            <StatCard title="Absent" value={stats.summary?.absent || 0} color="crimson" />
-            <StatCard
-              title="Eff. Absent"
-              value={stats.summary?.effectiveAbsent ?? 0}
-              color="crimson"
-            />
-            <StatCard
-              title="Overall %"
-              value={`${stats.summary?.percentage || 0}%`}
-              color={stats.isSafe ? 'blue' : 'crimson'}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AttendanceSummaryChart
-              data={
-                (
-                  [
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AttendanceSummaryChart
+            data={
+              (
+                [
+                  { name: 'Present', value: stats.summary?.present || 0, color: '#00D4FF' },
+                  { name: 'Absent', value: stats.summary?.absent || 0, color: '#FF4B6E' },
+                  { name: 'Late', value: stats.summary?.late || 0, color: '#FBBF24' },
+                ].filter((d) => d.value > 0) as AttendanceChartSegment[]
+              ).length > 0
+                ? ([
                     { name: 'Present', value: stats.summary?.present || 0, color: '#00D4FF' },
                     { name: 'Absent', value: stats.summary?.absent || 0, color: '#FF4B6E' },
                     { name: 'Late', value: stats.summary?.late || 0, color: '#FBBF24' },
-                  ].filter((d) => d.value > 0) as AttendanceChartSegment[]
-                ).length > 0
-                  ? ([
-                      { name: 'Present', value: stats.summary?.present || 0, color: '#00D4FF' },
-                      { name: 'Absent', value: stats.summary?.absent || 0, color: '#FF4B6E' },
-                      { name: 'Late', value: stats.summary?.late || 0, color: '#FBBF24' },
-                    ].filter((d) => d.value > 0) as AttendanceChartSegment[])
-                  : [{ name: 'No data', value: 1, color: '#334155' }]
-              }
-            />
+                  ].filter((d) => d.value > 0) as AttendanceChartSegment[])
+                : [{ name: 'No data', value: 1, color: '#334155' }]
+            }
+          />
+          <div className="space-y-6">
+            {/* Alert Messages Section */}
+            <div className="glass-panel rounded-2xl border border-white/10 p-5 space-y-4">
+              <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  Alert Messages
+                </h3>
+                <Link
+                  to="/attendance"
+                  className="px-3 py-1 rounded-lg border border-neon-blue/30 text-neon-blue bg-neon-blue/10 hover:bg-neon-blue/20 transition-all text-xs font-semibold"
+                >
+                  View Details
+                </Link>
+              </div>
+              {stats.subjectSafeSummary?.unsafeSubjects && stats.subjectSafeSummary.unsafeSubjects.length > 0 ? (
+                <ul className="space-y-3">
+                  {stats.subjectSafeSummary.unsafeSubjects.map((s: SubjectWiseAttendanceRow) => (
+                    <li
+                      key={s.subjectId || s.subjectCode}
+                      className="flex justify-between items-center border-b border-white/5 pb-2 text-sm"
+                    >
+                      <span className="text-slate-200">
+                        {s.subjectName}{' '}
+                        <span className="text-slate-400 text-xs">({s.subjectCode})</span>
+                      </span>
+                      <span className="text-neon-crimson font-bold text-sm shrink-0">
+                        {s.percentage}% (Need +{s.classesNeeded} present)
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-neon-blue">
+                  All subjects are in the safe zone. Well done!
+                </p>
+              )}
+            </div>
+
+            {/* Classes Needed per Subject */}
             <div className="glass-panel rounded-2xl border border-white/10 p-5 space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
                 Classes needed (per subject, to reach 75%)
               </h3>
-              <ul className="space-y-2 max-h-[260px] overflow-y-auto">
+              <ul className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                 {(stats.subjectWise as SubjectWiseAttendanceRow[])?.map((s) => (
                   <li
                     key={s.subjectId || s.subjectCode}
@@ -196,31 +209,7 @@ const Dashboard = () => {
               </ul>
             </div>
           </div>
-
-          <div
-            className={`rounded-xl px-5 py-4 border space-y-2 ${
-              stats.isSafe
-                ? 'bg-neon-blue/10 border-neon-blue/30 text-neon-blue'
-                : 'bg-neon-crimson/10 border-neon-crimson/30 text-neon-crimson'
-            }`}
-          >
-            <p className="font-semibold text-sm uppercase tracking-wide">
-              {stats.isSafe
-                ? `Safe zone — all ${stats.subjectSafeSummary?.totalSubjects ?? 0} subjects are at or above 75%`
-                : `Below safe zone — ${stats.subjectSafeSummary?.unsafeSubjects?.length ?? 0} subject(s) under 75%`}
-            </p>
-          </div>
-
-          {!stats.isSafe && (
-            <SubjectSafeZoneAlerts
-              unsafeSubjects={(stats.subjectSafeSummary?.unsafeSubjects as SubjectWiseAttendanceRow[]) || []}
-            />
-          )}
-
-          <SubjectAttendanceTable
-            rows={(stats.subjectWise as SubjectWiseAttendanceRow[]) || []}
-          />
-        </>
+        </div>
       )}
 
       {user?.role === 'teacher' && stats && (

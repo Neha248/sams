@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../lib/axios';
+import SubjectAttendanceTable from '../components/attendance/SubjectAttendanceTable';
 
 type AttendanceItem = {
   _id: string;
@@ -18,25 +19,31 @@ const todayLabel = new Date().toLocaleDateString('en-IN', {
 
 const Attendance = () => {
   const [records, setRecords] = useState<AttendanceItem[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchToday = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = (await api.get('/student/attendance?today=true&limit=50')) as {
-          data: { records: AttendanceItem[] };
-        };
-        setRecords(res.data.records || []);
+        const [attendanceRes, dashboardRes] = await Promise.all([
+          api.get('/student/attendance?today=true&limit=50') as Promise<{
+            data: { records: AttendanceItem[] };
+          }>,
+          api.get('/student/dashboard') as Promise<{ data: any }>,
+        ]);
+        setRecords(attendanceRes.data.records || []);
+        setDashboardStats(dashboardRes.data || null);
       } catch (err) {
-        setError(err as string);
+        console.error('Fetch attendance data error:', err);
+        setError('Failed to fetch attendance data.');
       } finally {
         setLoading(false);
       }
     };
-    fetchToday();
+    fetchData();
   }, []);
 
   const counts = useMemo(() => {
@@ -63,7 +70,25 @@ const Attendance = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Today&apos;s Attendance</h1>
+        <h1 className="text-2xl font-bold text-white">Attendance Overview</h1>
+        <p className="text-slate-400 text-sm mt-1">Detailed subject-wise breakdown and daily logs.</p>
+      </div>
+
+      {/* Subject-wise Attendance Table */}
+      {loading ? (
+        <div className="glass-panel border border-white/10 rounded-lg p-6 text-slate-400">
+          Loading subject-wise attendance...
+        </div>
+      ) : error ? (
+        <div className="glass-panel border border-neon-crimson/30 rounded-lg p-6 text-neon-crimson">
+          {error}
+        </div>
+      ) : (
+        <SubjectAttendanceTable rows={dashboardStats?.subjectWise || []} />
+      )}
+
+      <div>
+        <h2 className="text-xl font-bold text-white">Today&apos;s Attendance</h2>
         <p className="text-slate-400 text-sm mt-1">{todayLabel}</p>
         <p className="text-xs text-slate-500 mt-1">Only classes marked for today are shown here.</p>
       </div>
@@ -95,9 +120,7 @@ const Attendance = () => {
             <thead className="bg-white/5 text-slate-300 text-sm">
               <tr>
                 <th className="px-4 py-3">Subject</th>
-                <th className="px-4 py-3">Time marked</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Remarks</th>
               </tr>
             </thead>
             <tbody>
@@ -109,12 +132,6 @@ const Attendance = () => {
                       <span className="text-slate-500 text-sm ml-2">({row.subjectId.code})</span>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-400">
-                    {new Date(row.date).toLocaleTimeString('en-IN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs font-semibold uppercase px-2.5 py-1 rounded border ${statusStyle(row.status)}`}
@@ -123,7 +140,6 @@ const Attendance = () => {
                       {row.status === 'late' ? ' (counts toward absent if paired)' : ''}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-400 text-sm">{row.remarks || '—'}</td>
                 </tr>
               ))}
             </tbody>
