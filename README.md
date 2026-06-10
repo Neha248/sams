@@ -40,6 +40,205 @@ flowchart TB
 
 The app runs through TanStack Start's Vite dev server. `npm start` is an alias for `npm run dev`, and Docker uses `npm run dev` directly. `npm run build` is still kept as a verification step to catch bundle errors, but Docker does not run the built output.
 
+## Authentication And Authorization Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser
+    participant App as React App
+    participant Actions as TanStack Server Functions
+    participant Service as sams-service.ts
+    participant DB as SQLite
+
+    User->>Browser: Enter login ID and password
+    Browser->>App: Submit sign-in form
+    App->>Actions: loginAction(userId, password)
+    Actions->>Service: login(input)
+    Service->>DB: Find active user by login_id
+    DB-->>Service: User row with password_hash
+    Service->>Service: bcrypt.compareSync(password, password_hash)
+    alt Credentials valid
+        Service->>DB: Insert session token with 7-day expiry
+        Service->>DB: Build role-specific snapshot
+        Service-->>Actions: token + user + snapshot
+        Actions-->>App: Login response
+        App->>Browser: Save token in localStorage
+        App->>Browser: Redirect by role
+    else Invalid credentials
+        Service-->>Actions: Invalid login ID or password
+        Actions-->>App: Error
+    end
+
+    Browser->>App: Reload app later
+    App->>Browser: Read sams-sqlite-session token
+    App->>Actions: loadSnapshotAction(token)
+    Actions->>Service: loadSnapshot(token)
+    Service->>DB: Join sessions to active users and check expires_at
+    alt Session valid
+        Service->>DB: Rebuild role-specific snapshot
+        Service-->>App: snapshot
+        App->>App: Render allowed role UI
+    else Missing, expired, or inactive user
+        Service-->>App: Session expired
+        App->>Browser: Remove localStorage token
+        App->>App: Show login
+    end
+
+    User->>App: Run protected action
+    App->>Actions: action(token, payload)
+    Actions->>Service: Domain operation
+    Service->>DB: userByToken(token, requiredRoles)
+    alt Role allowed
+        Service->>DB: Commit requested change
+        Service-->>App: Fresh snapshot or export
+    else Role denied
+        Service-->>App: Permission error
+    end
+
+    User->>App: Logout
+    App->>Actions: logoutAction(token)
+    Actions->>Service: logout(token)
+    Service->>DB: Delete session row
+    App->>Browser: Remove localStorage token
+```
+
+The browser keeps only the opaque session token. Authorization is enforced on the server for every protected mutation/export by loading the session from SQLite and checking the required role.
+
+## Database ER Diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ SESSIONS : owns
+    USERS ||--o| STUDENT_PROFILES : has
+    USERS ||--o| TEACHER_PROFILES : has
+    DEPARTMENTS ||--o{ SUBJECTS : owns
+    DEPARTMENTS ||--o{ STUDENT_PROFILES : groups
+    TEACHER_PROFILES ||--o{ TEACHER_DEPARTMENTS : assigned
+    DEPARTMENTS ||--o{ TEACHER_DEPARTMENTS : includes
+    TEACHER_PROFILES ||--o{ TEACHER_SUBJECTS : assigned
+    SUBJECTS ||--o{ TEACHER_SUBJECTS : includes
+    USERS ||--o{ TIMETABLE : teaches
+    DEPARTMENTS ||--o{ TIMETABLE : schedules
+    SUBJECTS ||--o{ TIMETABLE : schedules
+    USERS ||--o{ ATTENDANCE : student
+    USERS ||--o{ ATTENDANCE : teacher
+    SUBJECTS ||--o{ ATTENDANCE : records
+    TIMETABLE ||--o{ ATTENDANCE : source
+    USERS ||--o{ NOTIFICATIONS : creates
+    NOTIFICATIONS ||--o{ NOTIFICATION_READS : read_by
+    USERS ||--o{ NOTIFICATION_READS : reads
+
+    USERS {
+        string id PK
+        string login_id UK
+        string full_name
+        string email UK
+        string password_hash
+        string role
+        int is_active
+        datetime created_at
+    }
+
+    SESSIONS {
+        string token PK
+        string user_id FK
+        datetime expires_at
+        datetime created_at
+    }
+
+    DEPARTMENTS {
+        string id PK
+        string name
+        string code UK
+    }
+
+    SUBJECTS {
+        string id PK
+        string name
+        string code UK
+        string department_id FK
+        int semester
+        int credits
+    }
+
+    STUDENT_PROFILES {
+        string id PK
+        string user_id FK
+        string roll_number UK
+        string department_id FK
+        int semester
+        string section
+        string phone
+        datetime created_at
+    }
+
+    TEACHER_PROFILES {
+        string id PK
+        string user_id FK
+        string employee_id UK
+        string phone
+        datetime created_at
+    }
+
+    TEACHER_DEPARTMENTS {
+        string profile_id PK,FK
+        string department_id PK,FK
+    }
+
+    TEACHER_SUBJECTS {
+        string profile_id PK,FK
+        string subject_id PK,FK
+    }
+
+    TIMETABLE {
+        string id PK
+        string department_id FK
+        int semester
+        string section
+        string day
+        string start_time
+        string end_time
+        string subject_id FK
+        string teacher_id FK
+        string room_no
+        int is_published
+    }
+
+    ATTENDANCE {
+        string id PK
+        string student_id FK
+        string subject_id FK
+        string teacher_id FK
+        string timetable_id FK
+        string date
+        string status
+        string remarks
+        datetime created_at
+        datetime updated_at
+        string updated_by
+    }
+
+    NOTIFICATIONS {
+        string id PK
+        string title
+        string message
+        string priority
+        string target_type
+        string target_id
+        datetime sent_at
+        string created_by FK
+        int is_draft
+    }
+
+    NOTIFICATION_READS {
+        string notification_id PK,FK
+        string user_id PK,FK
+        datetime read_at
+    }
+```
+
 ## Run
 
 ### Local Development
