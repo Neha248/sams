@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+.git
+.tanstack
+.vinxi
+.output
+.nitro
+.wrangler
+.vercel
+.codex
+npm-debug.log*
+.env
+.env.*
+sams

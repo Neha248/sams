@@ -1,449 +1,415 @@
 # Smart Attendance Management System (SAMS)
 
-Full-stack attendance platform for Admin, Teacher, and Student workflows.
+SAMS is a TanStack Start attendance platform for Admin, Teacher, and Student workflows. This rewrite keeps the original role-based features and replaces the old MongoDB/Express/Vite split with one SQLite-backed TanStack Start app.
 
-## Teacher Module (V2)
+## Stack
+
+- React + TanStack Start + TanStack Router
+- TypeScript
+- Tailwind CSS v4 through the existing `src/styles.css`
+- DaisyUI themes/components
+- SQLite persisted at `data/sams.sqlite` through `sql.js`
+- PDFKit for student and teacher reports
+
+## Architecture
+
+```mermaid
+flowchart TB
+    Browser["Browser"]
+    UI["React + TanStack Router\nsrc/components/SamsApp.tsx"]
+    Actions["TanStack Start server functions\nsrc/lib/sams-actions.ts"]
+    Service["Domain service layer\nsrc/server/sams-service.ts"]
+    DB["SQLite adapter + migrations\nsrc/server/sams-db.ts"]
+    File[("data/sams.sqlite")]
+    Seed["Seed data\nsrc/server/sams-seed.ts"]
+    Reports["PDF + CSV exports\napi.reports.* routes / CSV actions"]
+    Dev["npm run dev / npm start / Docker\nVite + TanStack Start dev server"]
+    Build["npm run build\nBuild verification output"]
+
+    Browser --> UI
+    UI --> Actions
+    Actions --> Service
+    Service --> DB
+    DB --> File
+    Seed --> DB
+    Service --> Reports
+    Dev --> UI
+    Dev --> Actions
+    Build -. verifies .-> UI
+```
+
+The app runs through TanStack Start's Vite dev server. `npm start` is an alias for `npm run dev`, and Docker uses `npm run dev` directly. `npm run build` is still kept as a verification step to catch bundle errors, but Docker does not run the built output.
+
+## Run
+
+### Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Build Verification
+
+```bash
+npm run typecheck
+npm run build
+```
+
+This verifies the app compiles. Run `npm run dev` or `npm start` to serve it.
+
+### Docker Compose
+
+```bash
+docker compose up
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+If port 3000 is already in use, run `SAMS_PORT=3001 docker compose up` and open [http://localhost:3001](http://localhost:3001).
+
+For Docker-based development with live file sync, run:
+
+```bash
+docker compose up --watch
+```
+
+The Compose watch setup syncs `src/`, `biome.json`, `tsconfig.json`, and `vite.config.ts` into the running container. Changes to `Dockerfile`, `.npmrc`, `package.json`, or `package-lock.json` trigger a rebuild because dependencies or the image may have changed.
+
+`docker compose down -v` removes the `sams-data` volume. The next startup creates a fresh seeded SQLite database.
+
+The Dockerfile intentionally uses the dev-server path: install dependencies, copy the app, create `data/`, and run `npm run dev`.
+
+## Verify
+
+```bash
+npm run typecheck
+npm run check
+npm run build
+npm run smoke
+```
+
+## Seeded Login Credentials
+
+- Admin: `ADMIN001` / `Admin@123`
+- Teacher: `TCH001` / `Teacher@123`
+- Student: `STU001` / `Student@123`
+
+The database is created and seeded automatically when `data/sams.sqlite` is missing.
+Set `SAMS_DB_FILE` to use a different SQLite file, for example during smoke tests.
+
+## Seeded Data
+
+The seed creates:
+
+- 8 departments: CS, IT, ECE, ME, EE, CE, BIO, MCA.
+- 19 subjects across semesters 1, 3, 5, and 7.
+- 12 teachers: `TCH001` through `TCH012`; all use `Teacher@123`.
+- 50 students: `STU001` through `STU050`; all use `Student@123`.
+- 420 published CS timetable slots across semesters 1, 3, 5, and 7, sections A/B/C.
+- Attendance history for the last 30 calendar days, skipping Sundays.
+- Starter notifications for all users and the CS department.
+
+Known student samples:
+
+- `STU001` is CS semester 1.
+- `STU002` is CS semester 3.
+- `STU003` is CS semester 5.
+- `STU004` is CS semester 7.
+
+Reset local seed data:
+
+```bash
+rm -f data/sams.sqlite
+npm run dev
+```
+
+Reset Docker seed data:
+
+```bash
+docker compose down -v
+docker compose up
+```
+
+## How To Test Everything
+
+### 1) Automated Smoke Checks
+
+Run:
+
+```bash
+npm run typecheck
+npm run build
+```
+
+Start the app locally:
+
+```bash
+npm run dev
+```
+
+In another terminal:
+
+```bash
+curl -I http://localhost:3000
+```
+
+Expected result: `HTTP/1.1 200 OK`.
+
+Docker smoke check:
+
+```bash
+SAMS_PORT=3001 docker compose up -d
+curl -I http://localhost:3001
+docker compose down
+```
+
+Expected result: `HTTP/1.1 200 OK`. Use `docker compose down -v` when you also want to remove seeded SQLite data.
+
+Seeded-data and workflow smoke check:
+
+```bash
+npm run smoke
+```
+
+Expected result:
+
+```json
+{
+  "admin": {
+    "students": 50,
+    "teachers": 12,
+    "departments": 8
+  },
+  "teacherAttendance": {
+    "rosterStudents": 5,
+    "existingRecords": 5
+  },
+  "notificationRead": true
+}
+```
+
+The exact `teacherAttendance.slot` and roster count depend on the first seeded slot assigned to `TCH001`.
+`npm run smoke` uses and resets `data/sams-smoke.sqlite`; it does not modify `data/sams.sqlite`.
+
+## Navigation And User Flows
+
+### Global Flow
+
+1. Open `/login`.
+2. Pick a seeded role shortcut or enter credentials manually.
+3. The app redirects by role:
+   - Admin: `/`
+   - Teacher: `/teacher/dashboard`
+   - Student: `/`
+4. Use the left navigation drawer on desktop or the menu button on mobile.
+5. The top-bar bell and sidebar Notifications item show a highlighted unread count when messages need attention.
+6. Use the moon icon in the top bar to switch DaisyUI themes.
+7. Use Logout to clear the local session token.
+
+### Admin Flow
+
+Admin can manage the institution catalog, people, timetable, and notifications.
+
+1. Dashboard `/`
+   - Review total students, teachers, departments, and conducted classes.
+   - Review attendance distribution.
+   - Create departments.
+   - Create subjects for a department, semester, and credit value.
+   - Filter Faculty Attendance by department.
+2. Students `/admin/students`
+   - Filter by department and semester.
+   - Search by student name, roll number, or email.
+   - Export CSV with report metadata and escaped fields.
+   - Add a student with full name, login ID, email, password, roll number, department, semester, and section.
+   - Remove a student account.
+3. Teachers `/admin/teachers`
+   - Filter by department and semester.
+   - Search by teacher name, employee ID, email, or subject.
+   - Create a teacher with login credentials, employee ID, department, and assigned subjects.
+   - Remove a teacher account.
+4. Timetable `/admin/timetable`
+   - Filter by department, semester, section, or search text.
+   - Add a slot with day, time, room, subject, teacher, and published status.
+   - Edit a slot from the Schedule table.
+   - Publish all slots for a selected department/semester/section cohort.
+   - Delete a slot and its attached attendance records.
+5. Notifications `/admin/notifications`
+   - Send global notices to every user.
+   - Send department notices to everyone in a department.
+   - Send direct student notices by selecting a department and student.
+   - Send direct teacher notices by selecting a department and teacher.
+   - Review sent notifications and unread/read state.
+
+### Teacher Flow
+
+Teacher can review their schedule, mark or revise attendance, export analysis, and read notices.
+
+1. Dashboard `/teacher/dashboard`
+   - Review current IST date/time.
+   - Review today's assigned classes and pending/completed state.
+   - Download the teacher PDF report.
+2. Mark Attendance `/teacher/attendance`
+   - Select department, semester, section, date, and assigned timetable slot.
+   - Load roster.
+   - Use bulk Present/Absent/Late buttons.
+   - Change individual statuses and remarks.
+   - Submit attendance.
+   - Reopen the same or previous date later and save changes. Teachers can revise only their assigned slots.
+   - Confirm saved-record badges, existing record count, and last-edited metadata.
+3. Analysis `/teacher/analysis`
+   - Filter by subject and status.
+   - Search by student name, university roll, or class roll.
+   - Export CSV with report/filter metadata and escaped fields.
+   - Download the teacher PDF report.
+4. Notifications `/teacher/notifications`
+   - Read global, department, and direct teacher notices.
+   - Mark unread notices as read.
+
+### Student Flow
+
+Student can review attendance, safe-zone status, timetable, reports, and notices.
+
+1. Dashboard `/`
+   - Review total classes, present, absent, and percentage.
+   - Review subject-wise 75% safe-zone status.
+   - Download the student PDF report.
+2. Attendance `/attendance`
+   - Filter personal records by subject.
+   - Filter records by Present/Absent/Late.
+   - Download the student PDF report.
+3. Timetable `/timetable`
+   - Review published slots for the student's department, semester, and section.
+4. Notifications `/notifications`
+   - Read global, department, and direct student notices.
+   - Mark unread notices as read.
+
+## Notifications And Messages
+
+SAMS supports one-way administrative messages through the Notifications module.
+
+To message someone:
+
+1. Sign in as Admin.
+2. Open `/admin/notifications`.
+3. Enter Title and Message.
+4. Choose a target:
+   - Global: sends to every active user.
+   - Department: sends to all students and teachers in that department.
+   - Student: select a department, then select a student.
+   - Teacher: select a department, then select a teacher.
+5. Click Send.
+6. The recipient reads it from `/notifications` for students or `/teacher/notifications` for teachers.
+7. Recipients can mark the message as read.
+
+Teacher-to-student chat and student-to-admin replies are not part of the original `./sams` feature set, so they are not shown in the UI unless implemented end to end.
+
+## Exports
+
+- Admin Students CSV: `/admin/students` -> Export CSV. Includes report metadata, generated timestamp, student rows, department, subject, and attendance counts.
+- Teacher Analysis CSV: `/teacher/analysis` -> CSV. Includes report metadata, active filters, and escaped rows.
+- Student PDF: dashboard or attendance page -> PDF. Includes profile, summary table, subject safe-zone table, and recent records.
+- Teacher PDF: dashboard or analysis page -> PDF. Includes profile, summary table, and attendance records.
+
+## Manual Test Checklist
+
+### Admin Checklist
+
+1. Sign in with `ADMIN001` / `Admin@123`.
+2. Dashboard should show 50 students, 12 teachers, and 8 departments.
+3. Open Students:
+   - Filter by Computer Science and semester 1.
+   - Search `STU001` or `Anjali`.
+   - Export CSV.
+   - Add a student with a unique login, email, and roll number.
+   - Remove that added student.
+4. Open Teachers:
+   - Filter by Computer Science.
+   - Search `TCH001` or `Amit`.
+   - Create a teacher with a unique login/email/employee ID and at least one subject.
+   - Remove that added teacher.
+5. Open Timetable:
+   - Filter CS, semester 1, section A.
+   - Add a slot.
+   - Edit a slot.
+   - Publish the cohort.
+   - Delete the slot you added.
+6. Open Notifications:
+   - Send a Global notification.
+   - Send a Department notification to Computer Science.
+   - Send a Student notification to `STU001`.
+   - Send a Teacher notification to `TCH001`.
+
+### Teacher Checklist
+
+1. Sign out, then sign in with `TCH001` / `Teacher@123`.
+2. Dashboard should show the IST date/time and assigned class summary.
+3. Open Mark Attendance:
+   - Select an assigned timetable slot.
+   - Load roster.
+   - Use a bulk status button, then change a few individual statuses.
+   - Submit attendance.
+   - Load the same roster/date again; saved statuses should persist with saved-record badges and last-edited metadata.
+   - Change a previous date and save again; teachers are allowed to revise attendance for their own assigned slots.
+4. Open Analysis:
+   - Filter by subject and status.
+   - Search a student name or roll number.
+   - Export CSV.
+   - Download the PDF report.
+5. Open Notifications:
+   - Confirm teacher-targeted, department, and global notifications are visible.
+   - Mark one unread notification as read; the unread count should update.
+
+### Student Checklist
+
+1. Sign out, then sign in with `STU001` / `Student@123`.
+2. Dashboard should show overall attendance and per-subject 75% safe-zone status.
+3. Open Attendance:
+   - Filter by subject.
+   - Filter by status.
+   - Download the PDF report.
+4. Open Timetable:
+   - Confirm published CS semester 1 section A slots are shown.
+5. Open Notifications:
+   - Confirm Global, CS Department, and direct student notifications appear after the admin sends them.
+   - Mark one unread notification as read; the unread count should update.
+
+## Features
+
+- Session auth with role-based access control.
+- Admin dashboard with institution metrics and faculty attendance.
+- Admin student overview with subject-wise attendance, CSV export, add student, and remove student.
+- Admin teacher assignment overview with create/remove teacher.
+- Admin timetable portal with filter, add, edit, delete, and publish cohort actions.
+- Admin notifications for global, department, student, and teacher targets.
+- Student dashboard with 75% safe-zone calculations and subject alerts.
+- Student attendance records, timetable, notifications, and PDF report export.
+- Teacher dashboard with live IST schedule summary.
+- Teacher attendance marking with roster loading, bulk updates, saved-record badges, edit history, and persisted SQLite upserts.
+- Teacher analytics with filters, CSV export, and PDF report export.
+- Teacher notifications with read receipts.
+- Notification read receipts for all roles.
+
+## Project Layout
 
 ```text
-Teacher
-├── Dashboard         — Readonly schedule terminal
-├── Mark Attendance   — Attendance marking workflow (frontend staging)
-└── Analysis Console  — Readonly extraction & analytics (`/teacher/analysis`)
+src/
+├── components/SamsApp.tsx
+├── lib/
+│   ├── sams-actions.ts
+│   └── sams-types.ts
+├── routes/
+│   ├── __root.tsx
+│   ├── index.tsx
+│   ├── admin.*.tsx
+│   ├── teacher.*.tsx
+│   ├── api.reports.*.ts
+│   └── attendance/timetable/notifications/login routes
+├── server/
+│   ├── sams-db.ts
+│   ├── sams-seed.ts
+│   └── sams-service.ts
+└── styles.css
 ```
-
-**Theme:** Neo-Shinjuku Night — dark navy, glassmorphism, neon cyan accents.
-
-## Tech Stack
-
-- Frontend: React 18, Vite, TypeScript, Tailwind CSS, Zustand, Axios, React Router
-- Backend: Node.js, Express, TypeScript, Mongoose, JWT, bcrypt, Zod, PDFKit
-- Infra: Docker, Docker Compose, Nginx, MongoDB, Mongo Express
-
-## Updated Project Structure
-
-```bash
-SAMS-update/
-├── backend/
-│   ├── src/
-│   │   ├── app.ts
-│   │   ├── server.ts
-│   │   ├── config/
-│   │   │   └── db.ts
-│   │   ├── controllers/
-│   │   │   ├── admin.controller.ts
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── student.controller.ts
-│   │   │   └── teacher.controller.ts
-│   │   ├── middlewares/
-│   │   │   ├── auth.middleware.ts
-│   │   │   ├── error.middleware.ts
-│   │   │   └── role.middleware.ts
-│   │   ├── models/
-│   │   │   ├── Attendance.model.ts
-│   │   │   ├── Department.model.ts
-│   │   │   ├── Notification.model.ts
-│   │   │   ├── StudentProfile.model.ts
-│   │   │   ├── Subject.model.ts
-│   │   │   ├── TeacherProfile.model.ts
-│   │   │   ├── Timetable.model.ts
-│   │   │   └── User.model.ts
-│   │   ├── routes/
-│   │   │   ├── admin.routes.ts
-│   │   │   ├── auth.routes.ts
-│   │   │   ├── student.routes.ts
-│   │   │   └── teacher.routes.ts
-│   │   ├── services/
-│   │   │   └── pdf.service.ts
-│   │   ├── utils/
-│   │   │   ├── jwt.ts
-│   │   │   ├── logger.ts
-│   │   │   └── response.ts
-│   │   └── validators/
-│   │       ├── attendance.validator.ts
-│   │       ├── auth.validator.ts
-│   │       └── timetable.validator.ts
-│   ├── scripts/
-│   │   └── seed.ts
-│   ├── package.json
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── AppLayout.tsx
-│   │   │   ├── attendance/
-│   │   │   │   ├── AttendanceFilters.tsx
-│   │   │   │   ├── AttendanceTable.tsx
-│   │   │   │   ├── AttendanceReviewModal.tsx
-│   │   │   │   └── AttendanceSummaryChart.tsx
-│   │   │   └── analytics/
-│   │   │       ├── AnalyticsFilters.tsx
-│   │   │       ├── AnalyticsTable.tsx
-│   │   │       ├── AttendanceOverviewChart.tsx
-│   │   │       ├── StudentTrendChart.tsx
-│   │   │       └── ExportPanel.tsx
-│   │   ├── lib/
-│   │   │   ├── axios.ts
-│   │   │   └── utils.ts
-│   │   ├── pages/
-│   │   │   ├── AdminNotifications.tsx
-│   │   │   ├── AdminStudents.tsx
-│   │   │   ├── Attendance.tsx
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── Login.tsx
-│   │   │   ├── Notifications.tsx
-│   │   │   ├── TeacherAnalytics.tsx
-│   │   │   ├── TeacherAttendance.tsx
-│   │   │   └── Timetable.tsx
-│   │   ├── store/
-│   │   │   └── authStore.ts
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── package.json
-│   ├── nginx.conf
-│   └── Dockerfile
-├── docker-compose.yml
-└── README.md
-```
-
-## Prerequisites
-
-- Node.js 18+
-- npm
-- Docker Desktop (for Docker setup)
-- MongoDB locally (only for non-Docker setup)
-
-## Installation and Setup
-
-### 1) Clone and install dependencies
-
-```bash
-git clone <your-repo-url>
-cd SAMS-update
-
-cd backend
-npm install
-
-cd ../frontend
-npm install
-```
-
-### 2) Configure backend environment
-
-Create `backend/.env`:
-
-```env
-PORT=5001
-NODE_ENV=development
-MONGO_URI=mongodb://127.0.0.1:27017/attendance_system
-JWT_SECRET=sams_super_secret_jwt_key_2026
-JWT_EXPIRES_IN=7d
-BCRYPT_ROUNDS=12
-CORS_ORIGIN=http://localhost:5173
-```
-
-## Run Modes
-
-### Option A: Docker Compose (Recommended)
-
-1. From project root:
-
-```bash
-docker-compose up --build -d
-```
-
-2. Check running services:
-
-```bash
-docker-compose ps
-```
-
-Expected services:
-
-- `sams-backend`
-- `sams-frontend`
-- `attendance-mongodb`
-- `sams-mongo-express`
-
-3. Seed the database:
-
-```bash
-docker exec -it sams-backend npm run seed
-```
-
-4. Open:
-
-- Frontend: use `docker-compose ps` and open host port mapped to container `80`
-- Backend health: open host port mapped to container `5000` + `/health`
-- Mongo Express: [http://localhost:8081](http://localhost:8081)
-
-### Option B: Local Development (Node + MongoDB)
-
-**You need MongoDB on port 27017 before the backend will start.**
-
-#### Start MongoDB (pick one)
-
-**A) Docker (recommended)** — start **Docker Desktop**, then from project root:
-
-```powershell
-.\scripts\start-mongo.ps1
-```
-
-Or: `docker compose -f docker-compose.mongo.yml up -d`
-
-**B) MongoDB installed on Windows** — start the **MongoDB Server** service in `services.msc`.
-
-#### Free port 5001 (if local backend says port in use)
-
-```powershell
-.\scripts\free-port.ps1
-```
-
-This stops **Node only** on port **5001** (never kills Docker). Docker's backend stays on **5000**; local `npm run dev` uses **5001** so both can run together with MongoDB in Docker.
-
-#### Run app
-
-1. Confirm MongoDB: port 27017 is listening.
-2. Start backend:
-
-```bash
-cd backend
-npm run dev
-```
-
-3. Start frontend in a new terminal:
-
-```bash
-cd frontend
-npm run dev
-```
-
-4. Seed data (required for test login):
-
-```bash
-cd backend
-npm run seed
-```
-
-5. Open:
-   - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend health: [http://localhost:5001/health](http://localhost:5001/health)
-
-## Login Credentials (Important)
-
-### SAMS App login credentials (after seed)
-
-Use these in the app login form:
-
-- Admin: `ADMIN001` / `Admin@123` (role: `admin`)
-- Teacher: `TCH001` / `Teacher@123` (role: `teacher`)
-- Student: `STU001` / `Student@123` (role: `student`)
-
-### Mongo Express credentials (NOT app login)
-
-Only for [http://localhost:8081](http://localhost:8081):
-
-- Username: `admin`
-- Password: `admin123`
-
-## Routes by Role
-
-- Student: `/`, `/attendance`, `/timetable`, `/notifications`
-- Teacher: `/`, `/teacher/attendance`, `/teacher/analytics`, `/timetable`
-- Admin: `/`, `/admin/students`, `/admin/teachers`, `/admin/timetable`, `/admin/notifications`
-
-After seeding, students and teachers are spread across **semesters 1, 3, 5, and 7**. Use the semester filter on the admin Students and Teachers pages to browse each cohort.
-
-- Teacher: `/`, `/teacher/attendance`, `/teacher/analysis`, `/timetable`
-- Admin: `/`, `/admin/students`, `/admin/notifications`
-
-## Teacher Analysis Console
-
-**Route:** `/teacher/analysis`  
-**Page:** `frontend/src/pages/TeacherAnalytics.tsx`
-
-**Purpose:** Attendance extraction and visualization terminal (readonly).
-
-### Features
-
-- Department, semester, section, and subject filters
-- Student search with roll-number identity resolution
-- Status filtering (Present / Absent / Late, multi-select)
-- Attendance extraction results table (search + pagination)
-- Cohort analytics and student-level trend visualization
-- CSV export (frontend-only)
-
-### Analytics Modes
-
-| Mode               | Condition                            | Charts                                                                               |
-| :----------------- | :----------------------------------- | :----------------------------------------------------------------------------------- |
-| **All students**   | Student search empty                 | Present vs Absent (pie)                                                              |
-| **Single student** | Name + university roll or class roll | Present vs Absent (pie) + attendance trend (line: Present / Absent / Late over date) |
-
-### Tech
-
-- Recharts, React, TypeScript
-- Glassmorphism UI, Neo-Shinjuku theme
-
-### Current State
-
-- **READ ONLY** — frontend analytics and mock/read staging only
-- No DB mutation from this screen
-- No backend PDF report generation yet
-
-### Future
-
-- PDF export (`pdf.service.ts`)
-- Attendance aggregation pipelines
-- Historical trends from live `GET /teacher/analytics`
-- Realtime analytics (deferred)
-
-## Common Troubleshooting
-
-- Ensure `backend/.env` exists.
-- Ensure `MONGO_URI` is present in `.env`.
-- Restart backend after editing `.env`.
-
-### Invalid credentials on login
-
-- Seed database first (`npm run seed` in backend).
-- Use `ADMIN001` / `Admin@123` (not `admin/admin123`).
-- Ensure correct role selected in login form.
-
-### API not reachable from frontend
-
-- Confirm backend is running and `/health` returns `{ status: "ok" }`.
-- In local mode: frontend `5173`, backend **`5001`** (see `backend/.env` and `frontend/.env.development`).
-- Vite proxies `/api` to `http://localhost:5001`. Docker full-stack backend uses **5000** — no conflict.
-- Do **not** run `.\scripts\free-port.ps1 -Port 5000` — that can break Docker. Use default `5001` only.
-
-### `/admin/timetable` shows "Route not found"
-
-- That text comes from the **backend** (API not reachable on the proxy target), not a missing React page.
-- Confirm `http://localhost:5001/health` works and restart `npm run dev` in `frontend` after changing ports.
-- Restart backend after pulling timetable changes; confirm `GET /api/admin/timetable/overview` works.
-- Log in as **admin** and open `http://localhost:5173/admin/timetable`.
-
-## Useful Commands
-
-```bash
-# Local backend
-cd backend && npm run dev
-
-# Local frontend
-cd frontend && npm run dev
-
-# Seed
-cd backend && npm run seed
-
-# Docker up/down (via npm scripts from backend or frontend folder)
-npm run docker:up
-npm run docker:down
-
-# Docker up/down (direct commands from project root)
-docker-compose up --build -d
-docker-compose down
-```
-
-## Contributing
-
-### Creating a Feature Branch
-
-When working on a dashboard or feature for a specific role, create a new branch following the naming convention:
-
-```bash
-# For Teacher dashboard features
-git checkout -b teacher-dashboard
-
-# For Admin dashboard features
-git checkout -b admin-dashboard
-
-# For Student dashboard features
-git checkout -b student-dashboard
-```
-
-#### Branch Naming Pattern
-
-Use the following pattern:
-
-- `teacher-dashboard` — For Teacher module features
-- `admin-dashboard` — For Admin module features
-- `student-dashboard` — For Student module features
-- For sub-features, append with a hyphen: `teacher-dashboard-attendance-sync`, `admin-dashboard-timetable`, etc.
-
-### Development Workflow
-
-1. **Create and switch to your branch:**
-
-```bash
-git checkout -b teacher-dashboard
-```
-
-2. **Make your changes** in the frontend and/or backend
-
-3. **Commit your changes with clear messages:**
-
-```bash
-git add .
-git commit -m "feat: add attendance marking workflow for teachers"
-```
-
-4. **Push your branch to the repository:**
-
-```bash
-git push -u origin teacher-dashboard
-```
-
-The `-u` flag sets the upstream branch so future pushes don't require the branch name.
-
-### Pushing Code to Main Repository
-
-Once your feature is complete and tested:
-
-1. **Ensure your branch is up to date with main:**
-
-```bash
-git checkout main
-git pull origin main
-git checkout teacher-dashboard
-git merge main
-```
-
-2. **Resolve any merge conflicts** if they exist
-
-3. **Push your updated branch:**
-
-```bash
-git push origin teacher-dashboard
-```
-
-4. **Create a Pull Request (PR)** on GitHub/your repository:
-   - Go to your repository's pull requests section
-   - Click "New Pull Request"
-   - Select `main` as the base branch and your `teacher-dashboard` branch as the compare branch
-   - Add a clear title and description of your changes
-   - Wait for code review and approval
-
-5. **Merge to main** once approved:
-
-```bash
-# Via GitHub UI (recommended) or via CLI:
-git checkout main
-git pull origin main
-git merge teacher-dashboard
-git push origin main
-```
-
-6. **Delete the feature branch (optional):**
-
-```bash
-git branch -d teacher-dashboard
-git push origin --delete teacher-dashboard
-```
-
-### Best Practices
-
-- Keep commits atomic — one feature/fix per commit
-- Write descriptive commit messages
-- Test your changes locally before pushing (`npm run dev` for local, `docker-compose up` for Docker)
-- Pull from `main` regularly to avoid large merge conflicts
-- Use meaningful branch names so others understand what you're working on
