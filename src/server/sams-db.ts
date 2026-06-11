@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import fs from "node:fs"
+import { createRequire } from "node:module"
 import path from "node:path"
 import initSqlJs, { type Database } from "sql.js"
 import { seedDatabase } from "./sams-seed"
@@ -7,25 +8,34 @@ import { seedDatabase } from "./sams-seed"
 export type SqlParam = string | number | null
 
 let databasePromise: Promise<Database> | null = null
+const require = createRequire(import.meta.url)
 
 const configuredDbFile = process.env.SAMS_DB_FILE
 const dbFile = configuredDbFile
 	? path.resolve(process.cwd(), configuredDbFile)
-	: path.join(process.cwd(), "data", "sams.sqlite")
+	: process.env.VERCEL
+		? path.join("/tmp", "sams.sqlite")
+		: path.join(process.cwd(), "data", "sams.sqlite")
 const dataDir = path.dirname(dbFile)
 
 function ensureDataDir() {
 	if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
 }
 
-function wasmPath() {
-	return path.join(
-		process.cwd(),
-		"node_modules",
-		"sql.js",
-		"dist",
-		"sql-wasm.wasm",
-	)
+function wasmFilePath() {
+	return require.resolve("sql.js/dist/sql-wasm.wasm")
+}
+
+function toArrayBuffer(bytes: ArrayBuffer | ArrayBufferView) {
+	if (bytes instanceof ArrayBuffer) return bytes
+	return bytes.buffer.slice(
+		bytes.byteOffset,
+		bytes.byteOffset + bytes.byteLength,
+	) as ArrayBuffer
+}
+
+function readWasmBinary() {
+	return toArrayBuffer(fs.readFileSync(wasmFilePath()))
 }
 
 function persistDatabase(db: Database) {
@@ -104,7 +114,7 @@ export async function writeDb<T>(writer: (db: Database) => T | Promise<T>) {
 async function openDatabase() {
 	ensureDataDir()
 	const SQL = await initSqlJs({
-		locateFile: () => wasmPath(),
+		wasmBinary: readWasmBinary(),
 	})
 	const db = fs.existsSync(dbFile)
 		? new SQL.Database(fs.readFileSync(dbFile))

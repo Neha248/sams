@@ -8,8 +8,9 @@ SAMS is a TanStack Start attendance platform for Admin, Teacher, and Student wor
 - TypeScript
 - Tailwind CSS v4 through the existing `src/styles.css`
 - DaisyUI themes/components
-- SQLite persisted at `data/sams.sqlite` through `sql.js`
+- SQLite persisted at `data/sams.sqlite` locally, or `/tmp/sams.sqlite` on Vercel demo deployments, through `sql.js`
 - PDFKit for student and teacher reports
+- Nitro Vite adapter for Vercel deployment
 
 ## Architecture
 
@@ -258,6 +259,38 @@ npm run build
 ```
 
 This verifies the app compiles. Run `npm run dev` or `npm start` to serve it.
+
+### Vercel Demo Deployment
+
+This repository is configured for simple Vercel deployment with the Nitro Vite adapter and `vercel.json`.
+
+1. Push the repository to GitHub, GitLab, or Bitbucket.
+2. Import the repository in Vercel.
+3. Keep the detected framework preset as TanStack Start.
+4. Keep the default build command, `npm run build`.
+5. Do not set an output directory.
+6. Deploy.
+
+No database environment variable is required for a demo deployment. When `VERCEL` is present and `SAMS_DB_FILE` is not set, the app uses:
+
+```bash
+/tmp/sams.sqlite
+```
+
+The seed is automatic. On first access, `src/server/sams-db.ts` creates the SQLite file, runs migrations, checks whether `users` is empty, and inserts the seeded admin, teachers, students, timetable, attendance history, and notifications.
+
+Important Vercel storage behavior:
+
+- Vercel Functions have a read-only filesystem except writable `/tmp` scratch space.
+- `/tmp/sams.sqlite` is suitable for demos and preview testing.
+- `/tmp` is not durable application storage. The database, sessions, and changes can reset across cold starts, function instances, and deployments.
+- For real production data, replace the file-backed SQLite adapter with durable storage such as Turso/libSQL, Vercel Postgres/Neon, or run the Docker setup on a host with a persistent volume.
+
+Optional explicit env var:
+
+```bash
+SAMS_DB_FILE=/tmp/sams.sqlite
+```
 
 ### Docker Compose
 
