@@ -14,11 +14,11 @@ export default defineConfig({
 		tailwindcss(),
 		tanstackStart(),
 		nitro({
-			traceDeps: ["sql.js*"],
+			traceDeps: ["pdfkit*", "sql.js*"],
 		}),
 		viteReact(),
 	],
 	ssr: {
-		external: ["sql.js"],
+		external: ["pdfkit", "sql.js"],
 	},
 })

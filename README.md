@@ -279,6 +279,8 @@ No database environment variable is required for a demo deployment. When `VERCEL
 
 The seed is automatic. On first access, `src/server/sams-db.ts` creates the SQLite file, runs migrations, checks whether `users` is empty, and inserts the seeded admin, teachers, students, timetable, attendance history, and notifications.
 
+PDF exports are also bundled for Vercel. The build traces PDFKit and its font/profile data files into the server function so student and teacher reports can be downloaded from hosted deployments.
+
 Important Vercel storage behavior:
 
 - Vercel Functions have a read-only filesystem except writable `/tmp` scratch space.

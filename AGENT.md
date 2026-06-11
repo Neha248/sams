@@ -43,6 +43,7 @@
 - UI is intentionally consolidated in `src/components/SamsApp.tsx` for simplicity.
 - Attendance audit fields are `attendance.updated_at` and `attendance.updated_by`; migrations add them automatically for existing SQLite files.
 - Report formatting helpers live in `src/server/pdf-report.ts`.
+- PDF reports intentionally import `pdfkit/js/pdfkit.js` with `src/types/pdfkit-cjs.d.ts`. Do not switch this back to the default ESM import; PDFKit's ESM build references `__dirname` and fails in Vercel's ESM server bundle.
 - Admin student CSV and teacher analysis CSV must keep metadata rows and proper CSV escaping.
 - Student/teacher PDF reports should use table sections rather than unstructured line dumps.
 - Messaging is one-way admin notifications. Do not add chat/reply screens unless the feature is implemented end to end.

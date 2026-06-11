@@ -1,4 +1,10 @@
-import PDFDocument from "pdfkit"
+import type PDFDocument from "pdfkit"
+import PdfDocumentModule from "pdfkit/js/pdfkit.js"
+
+type PdfDocumentConstructor = typeof PDFDocument
+type PdfDocumentInstance = InstanceType<PdfDocumentConstructor>
+
+const PdfDocument = PdfDocumentModule as PdfDocumentConstructor
 
 type PdfColumn = {
 	header: string
@@ -9,9 +15,9 @@ type PdfColumn = {
 
 type PdfRow = Record<string, string | number>
 
-export function renderPdf(write: (doc: PDFKit.PDFDocument) => void) {
+export function renderPdf(write: (doc: PdfDocumentInstance) => void) {
 	return new Promise<Buffer>((resolve) => {
-		const doc = new PDFDocument({ margin: 40, size: "A4" })
+		const doc = new PdfDocument({ margin: 40, size: "A4" })
 		const chunks: Buffer[] = []
 		doc.on("data", (chunk: Buffer) => chunks.push(chunk))
 		doc.on("end", () => resolve(Buffer.concat(chunks)))
@@ -30,7 +36,7 @@ export function pdfResponse(buffer: Buffer, filename: string) {
 }
 
 export function reportTitle(
-	doc: PDFKit.PDFDocument,
+	doc: PdfDocumentInstance,
 	title: string,
 	subtitle: string,
 ) {
@@ -40,14 +46,14 @@ export function reportTitle(
 	doc.moveDown()
 }
 
-export function sectionTitle(doc: PDFKit.PDFDocument, title: string) {
+export function sectionTitle(doc: PdfDocumentInstance, title: string) {
 	doc.moveDown(0.6)
 	doc.font("Helvetica-Bold").fontSize(12).fillColor("#111827").text(title)
 	doc.moveDown(0.3)
 }
 
 export function keyValueGrid(
-	doc: PDFKit.PDFDocument,
+	doc: PdfDocumentInstance,
 	rows: Array<[string, string | number]>,
 ) {
 	const startX = doc.page.margins.left
@@ -71,7 +77,7 @@ export function keyValueGrid(
 }
 
 export function dataTable(
-	doc: PDFKit.PDFDocument,
+	doc: PdfDocumentInstance,
 	columns: PdfColumn[],
 	rows: PdfRow[],
 ) {
@@ -110,7 +116,7 @@ export function dataTable(
 }
 
 function drawHeader(
-	doc: PDFKit.PDFDocument,
+	doc: PdfDocumentInstance,
 	columns: PdfColumn[],
 	startX: number,
 	rowHeight: number,
@@ -138,6 +144,6 @@ function drawHeader(
 	doc.y = y + rowHeight
 }
 
-function needsPage(doc: PDFKit.PDFDocument, height: number) {
+function needsPage(doc: PdfDocumentInstance, height: number) {
 	return doc.y + height > doc.page.height - doc.page.margins.bottom
 }
