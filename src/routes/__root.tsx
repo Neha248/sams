@@ -1,4 +1,5 @@
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
+import { useEffect } from "react"
 import type { ReactNode } from "react"
 import "../styles.css"
 
@@ -21,12 +22,39 @@ export const Route = createRootRoute({
 				content:
 					"TanStack Start attendance management system with SQLite storage.",
 			},
+			{ name: "theme-color", content: "#111827" },
+			{ name: "application-name", content: "SAMS" },
+			{ name: "apple-mobile-web-app-capable", content: "yes" },
+			{ name: "apple-mobile-web-app-title", content: "SAMS" },
+		],
+		links: [
+			{ rel: "manifest", href: "/manifest.webmanifest" },
+			{ rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
 		],
 	}),
 	shellComponent: RootDocument,
 })
 
 function RootDocument({ children }: { children: ReactNode }) {
+	useEffect(() => {
+		if (!("serviceWorker" in navigator)) return
+
+		const registerServiceWorker = () => {
+			void navigator.serviceWorker.register("/sw.js").catch((error) => {
+				console.warn("SAMS service worker registration failed:", error)
+			})
+		}
+
+		if (document.readyState === "complete") {
+			registerServiceWorker()
+			return
+		}
+
+		window.addEventListener("load", registerServiceWorker, { once: true })
+		return () => window.removeEventListener("load", registerServiceWorker)
+	}, [])
+
 	return (
 		<html lang="en" data-theme="dracula" suppressHydrationWarning>
 			<head>

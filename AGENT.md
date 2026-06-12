@@ -9,6 +9,7 @@
 - **Styling**: DaisyUI components/themes through the existing `src/styles.css`. Do not edit `src/styles.css` unless explicitly requested.
 - **Runtime**: `npm run dev` is the app server. `npm start` aliases to `npm run dev`.
 - **Docker**: `docker compose up` runs the same Vite/TanStack dev-server path with persistent data in the `sams-data` volume. Use `docker compose up --watch` for Docker-based development with live source sync. Set `SAMS_PORT=3001` if host port 3000 is already occupied. The Dockerfile should stay minimal: install dependencies, copy the app, create `data/`, run `npm run dev`.
+- **PWA**: The app is installable through `public/manifest.webmanifest` and `public/sw.js`. The service worker must stay network-only; SAMS is not an offline app.
 
 ## Core Workflows
 
@@ -49,6 +50,7 @@
 - Messaging is one-way admin notifications. Do not add chat/reply screens unless the feature is implemented end to end.
 - Keep mobile layouts usable with single-column forms, horizontally scrollable data tables, and compact header actions.
 - Keep unread notification badges visible in the header and role navigation whenever a signed-in user has unread messages.
+- Keep PWA assets simple and static. Do not add precaching or offline fallbacks unless the app's server-backed auth, reports, and SQLite persistence are redesigned for offline use.
 - Vercel `/tmp` storage is demo-only scratch space; sessions and attendance writes are not durable there. Use durable database storage before treating a Vercel deployment as production.
 - `npm run smoke` resets and uses `data/sams-smoke.sqlite`, not the normal development database.
 - The old source app remains under `./sams` for reference only.

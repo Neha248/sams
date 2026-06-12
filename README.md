@@ -11,6 +11,7 @@ SAMS is a TanStack Start attendance platform for Admin, Teacher, and Student wor
 - SQLite persisted at `data/sams.sqlite` locally, or `/tmp/sams.sqlite` on Vercel demo deployments, through `sql.js`
 - PDFKit for student and teacher reports
 - Nitro Vite adapter for Vercel deployment
+- Installable PWA shell with a network-only service worker; SAMS is not designed to work offline
 
 ## Architecture
 
@@ -259,6 +260,12 @@ npm run build
 ```
 
 This verifies the app compiles. Run `npm run dev` or `npm start` to serve it.
+
+### Installable PWA
+
+SAMS can be installed from supported desktop and mobile browsers. The app exposes `public/manifest.webmanifest`, app icons, and `public/sw.js`.
+
+The service worker is intentionally network-only. It exists for installability and update control, but it does not cache pages, reports, API responses, or SQLite data for offline use.
 
 ### Vercel Demo Deployment
 
