@@ -1,0 +1,45 @@
+{
+  "name": "sams-tanstack-start",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host 0.0.0.0",
+    "build": "vite build",
+    "start": "npm run dev",
+    "typecheck": "tsc --noEmit",
+    "smoke": "SAMS_DB_FILE=data/sams-smoke.sqlite tsx src/server/sams-smoke.ts",
+    "check": "biome check --write src vite.config.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.157.16",
+    "@tanstack/react-start": "1.157.16",
+    "bcryptjs": "latest",
+    "daisyui": "latest",
+    "lucide-react": "latest",
+    "nitro": "^3.0.260610-beta",
+    "pdfkit": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest",
+    "sql.js": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@rollup/rollup-linux-x64-gnu": "^4.61.1",
+    "@tailwindcss/typography": "latest",
+    "@tailwindcss/vite": "4.2.4",
+    "@types/node": "latest",
+    "@types/pdfkit": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/sql.js": "latest",
+    "@vitejs/plugin-react": "4.7.0",
+    "rollup": "^4.61.1",
+    "tailwindcss": "4.2.4",
+    "tsx": "^4.22.4",
+    "typescript": "latest",
+    "vite": "7.3.2",
+    "vite-tsconfig-paths": "latest"
+  }
+}

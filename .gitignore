@@ -1,39 +1,24 @@
-# Cursor / VS Code
-.cursor/
-.vscode/
-
-# OS / temp
+node_modules
+data
 .DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Environment files
+dist
+dist-ssr
+*.local
 .env
-.env.*
-!.env.example
-
-# Node / JS (generic)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# Build outputs
-dist/
-build/
-coverage/
-.next/
-out/
-
-# Frontend specific (keep redundant for clarity)
-frontend/node_modules/
-frontend/dist/
-
-# Backend specific (backend has its own .gitignore too)
-backend/node_modules/
-backend/dist/
-backend/logs/
-
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todo*
+fixtures
+samples
+public/ffmpeg
+public/libreoffice-wasm
+public/qpdf.wasm
+playwright-report/
+test-results/
+.codex
+.vercel
+sams
